@@ -5,6 +5,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Calculador</title>
+  <link rel="icon" type="image/png" href="logo-pw.png" />
+  <link rel="shortcut icon" type="image/png" href="logo-pw.png" />
+  <link rel="apple-touch-icon" href="logo-pw.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
@@ -21,28 +24,46 @@
     }
 
     :root {
-      --bg: #09090B;
-      --surface: #121216;
-      --surface2: #18181C;
-      --border: #27272A;
-      --border2: #3F3F46;
-      --text: #FAFAFA;
-      --text-muted: #71717A;
-      --text-dim: #A1A1AA;
+      /* Fundo preto profundo preservado, enriquecido com tons nobres da estética Perfect World */
+      --bg: #07070A;
+      --surface: #0E0E15;
+      --surface2: #14141F;
+      --surface-elevated: #1A1A28;
+      --border: #232334;
+      --border2: #35354D;
+      --border-gold: rgba(245, 158, 11, .35);
+
+      --text: #F8FAFC;
+      --text-muted: #7E7E96;
+      --text-dim: #A6A6C2;
+
+      /* Cores extraídas da Logo do Perfect World */
+      /* 1. Ouro Imperial & Moedas */
       --gold: #F59E0B;
+      --gold-bright: #FBBF24;
       --gold-soft: #FDE68A;
-      --gold-dim: #92400E;
+      --gold-dim: rgba(245, 158, 11, .15);
+
+      /* 2. Jade Esmeralda (Lucro, Sucesso & Economia) */
       --green: #10B981;
-      --green-dim: #064E3B;
-      --red: #F43F5E;
-      --red-dim: #4C0519;
-      --blue: #6366F1;
-      --blue-dim: #1E1B4B;
+      --green-bright: #34D399;
+      --green-dim: rgba(16, 185, 129, .15);
+
+      /* 3. Fogo Sagrado / Rubi Carmesim (Chamas da logo & Alertas de prejuízo) */
+      --red: #EF4444;
+      --red-bright: #F87171;
+      --red-dim: rgba(239, 68, 68, .15);
+
+      /* 4. Azul Celestial & Noite Cósmica (Dragão celestial, água e templos da logo) */
+      --blue: #38BDF8;
+      --blue-bright: #7DD3FC;
+      --blue-dim: rgba(56, 189, 248, .15);
+
       --radius: 12px;
       --radius-sm: 8px;
       --radius-xs: 6px;
-      --shadow: 0 4px 24px rgba(0, 0, 0, .45);
-      --shadow-sm: 0 2px 8px rgba(0, 0, 0, .3);
+      --shadow: 0 4px 24px rgba(0, 0, 0, .6);
+      --shadow-sm: 0 2px 10px rgba(0, 0, 0, .4);
       --transition: 180ms cubic-bezier(.4, 0, .2, 1);
     }
 
@@ -53,6 +74,9 @@
 
     body {
       background: var(--bg);
+      background-image: 
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(245, 158, 11, .06), transparent 60%),
+        radial-gradient(circle at 100% 100%, rgba(56, 189, 248, .03), transparent 40%);
       color: var(--text);
       font-family: 'Inter', system-ui, sans-serif;
       min-height: 100vh;
@@ -61,8 +85,8 @@
     }
 
     ::selection {
-      background: rgba(245, 158, 11, .25);
-      color: var(--text);
+      background: rgba(245, 158, 11, .3);
+      color: #FFFFFF;
     }
 
     ::-webkit-scrollbar {
@@ -79,6 +103,10 @@
       border-radius: 99px;
     }
 
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--gold);
+    }
+
     /* ─── Layout ─────────────────────────────────────────────── */
     .app-wrap {
       max-width: 1100px;
@@ -90,26 +118,31 @@
     .app-header {
       display: flex;
       align-items: center;
-      gap: .75rem;
+      gap: .85rem;
       padding: 1.5rem 0 .5rem;
     }
 
-    .logo-icon {
-      width: 38px;
-      height: 38px;
-      background: linear-gradient(135deg, #F59E0B, #D97706);
-      border-radius: 10px;
-      display: grid;
-      place-items: center;
-      font-size: 1.1rem;
-      box-shadow: 0 0 20px rgba(245, 158, 11, .35);
+    .logo-img {
+      width: 44px;
+      height: 44px;
+      border-radius: 11px;
+      object-fit: cover;
+      border: 1px solid rgba(245, 158, 11, .45);
+      box-shadow: 0 0 16px rgba(245, 158, 11, .28), 0 2px 8px rgba(0, 0, 0, .6);
       flex-shrink: 0;
+      transition: transform var(--transition), box-shadow var(--transition);
+    }
+
+    .logo-img:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 22px rgba(245, 158, 11, .45), 0 2px 10px rgba(0, 0, 0, .8);
     }
 
     .logo-text h1 {
-      font-size: 1.1rem;
+      font-size: 1.15rem;
       font-weight: 700;
       letter-spacing: -.02em;
+      color: #FFFFFF;
     }
 
     .logo-text p {
@@ -122,10 +155,10 @@
       position: sticky;
       top: 0;
       z-index: 100;
-      background: rgba(9, 9, 11, .85);
+      background: rgba(7, 7, 10, .88);
       backdrop-filter: blur(16px) saturate(1.4);
       -webkit-backdrop-filter: blur(16px) saturate(1.4);
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid rgba(245, 158, 11, .2);
       padding: .75rem 0;
       margin: 0 -1.25rem;
       padding-left: 1.25rem;
@@ -222,12 +255,13 @@
     }
 
     .pill.gold {
-      border-color: rgba(245, 158, 11, .35);
-      background: rgba(245, 158, 11, .08);
+      border-color: rgba(245, 158, 11, .38);
+      background: rgba(245, 158, 11, .09);
+      box-shadow: 0 0 10px rgba(245, 158, 11, .08);
     }
 
     .pill.gold .value {
-      color: var(--gold);
+      color: var(--gold-bright);
     }
 
     /* ─── Section Headers ─────────────────────────────────────── */
@@ -245,14 +279,15 @@
     .section-badge {
       width: 24px;
       height: 24px;
-      background: rgba(245, 158, 11, .12);
-      border: 1px solid rgba(245, 158, 11, .3);
+      background: linear-gradient(135deg, rgba(245, 158, 11, .18), rgba(239, 68, 68, .12));
+      border: 1px solid rgba(245, 158, 11, .38);
       border-radius: 6px;
       display: grid;
       place-items: center;
       font-size: .7rem;
       font-weight: 700;
-      color: var(--gold);
+      color: var(--gold-bright);
+      box-shadow: 0 0 10px rgba(245, 158, 11, .15);
       flex-shrink: 0;
     }
 
@@ -379,17 +414,22 @@
 
     .plain-input:focus {
       border-color: var(--gold);
-      box-shadow: 0 0 0 3px rgba(245, 158, 11, .15);
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, .2);
     }
 
     .plain-input.green:focus {
       border-color: var(--green);
-      box-shadow: 0 0 0 3px rgba(16, 185, 129, .15);
+      box-shadow: 0 0 0 3px var(--green-dim);
+    }
+
+    .plain-input.celestial:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px var(--blue-dim);
     }
 
     .plain-input.red:focus {
       border-color: var(--red);
-      box-shadow: 0 0 0 3px rgba(244, 63, 94, .15);
+      box-shadow: 0 0 0 3px var(--red-dim);
     }
 
     /* Qty stepper */
@@ -483,23 +523,26 @@
     }
 
     .btn-gold {
-      background: rgba(245, 158, 11, .12);
-      border: 1px solid rgba(245, 158, 11, .3);
-      color: var(--gold);
+      background: linear-gradient(135deg, rgba(245, 158, 11, .16), rgba(217, 119, 6, .16));
+      border: 1px solid rgba(245, 158, 11, .38);
+      color: var(--gold-bright);
     }
 
     .btn-gold:hover {
-      background: rgba(245, 158, 11, .2);
+      background: linear-gradient(135deg, rgba(245, 158, 11, .28), rgba(217, 119, 6, .28));
+      border-color: var(--gold-bright);
+      box-shadow: 0 0 14px rgba(245, 158, 11, .25);
     }
 
     .btn-green {
-      background: rgba(16, 185, 129, .12);
-      border: 1px solid rgba(16, 185, 129, .3);
-      color: var(--green);
+      background: rgba(16, 185, 129, .14);
+      border: 1px solid rgba(16, 185, 129, .38);
+      color: var(--green-bright);
     }
 
     .btn-green:hover {
-      background: rgba(16, 185, 129, .2);
+      background: rgba(16, 185, 129, .24);
+      box-shadow: 0 0 12px rgba(16, 185, 129, .22);
     }
 
     .btn-copy {
@@ -513,12 +556,14 @@
 
     .btn-copy:hover {
       border-color: var(--gold);
-      color: var(--gold);
+      color: var(--gold-bright);
+      box-shadow: 0 0 8px rgba(245, 158, 11, .2);
     }
 
     .btn-copy.copied {
       border-color: var(--green);
-      color: var(--green);
+      color: var(--green-bright);
+      box-shadow: 0 0 8px rgba(16, 185, 129, .2);
     }
 
     .btn-danger-ghost {
@@ -528,7 +573,7 @@
     }
 
     .btn-danger-ghost:hover {
-      background: rgba(244, 63, 94, .08);
+      background: var(--red-dim);
       border-color: var(--red);
     }
 
@@ -547,6 +592,7 @@
       padding: .9rem 1rem;
       position: relative;
       overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
     }
 
     .result-card::before {
@@ -557,19 +603,25 @@
       right: 0;
       height: 2px;
       background: var(--accent, var(--border));
-      opacity: .7;
+      opacity: .8;
     }
 
     .result-card.accent-gold {
       --accent: var(--gold);
+      border-color: rgba(245, 158, 11, .32);
+      background: linear-gradient(180deg, rgba(245, 158, 11, .06) 0%, var(--surface2) 100%);
     }
 
     .result-card.accent-green {
       --accent: var(--green);
+      border-color: rgba(16, 185, 129, .32);
+      background: linear-gradient(180deg, rgba(16, 185, 129, .06) 0%, var(--surface2) 100%);
     }
 
     .result-card.accent-blue {
       --accent: var(--blue);
+      border-color: rgba(56, 189, 248, .32);
+      background: linear-gradient(180deg, rgba(56, 189, 248, .06) 0%, var(--surface2) 100%);
     }
 
     .result-card-label {
@@ -602,20 +654,21 @@
     }
 
     .result-card.accent-gold .result-card-value {
-      color: var(--gold);
+      color: var(--gold-bright);
     }
 
     .result-card.accent-green .result-card-value {
-      color: var(--green);
+      color: var(--green-bright);
     }
 
     /* ─── Simulador BI Card ──────────────────────────────────── */
     .bi-sim-card {
       margin-top: 1rem;
-      background: rgba(245, 158, 11, .06);
-      border: 1px solid rgba(245, 158, 11, .22);
+      background: linear-gradient(145deg, rgba(245, 158, 11, .07), rgba(239, 68, 68, .03));
+      border: 1px solid rgba(245, 158, 11, .25);
       border-radius: var(--radius);
       padding: 1rem 1.25rem;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, .3);
     }
 
     .bi-sim-card .header {
@@ -625,13 +678,14 @@
       margin-bottom: .6rem;
       font-size: .78rem;
       font-weight: 700;
-      color: var(--gold);
+      color: var(--gold-bright);
       text-transform: uppercase;
       letter-spacing: .05em;
     }
 
     .bi-sim-card .header svg {
-      opacity: .8;
+      opacity: .85;
+      stroke: var(--gold-bright);
     }
 
     .bi-sim-body {
@@ -663,6 +717,7 @@
       margin-top: .75rem;
       padding: .6rem .85rem;
       background: rgba(245, 158, 11, .08);
+      border: 1px solid rgba(245, 158, 11, .15);
       border-radius: var(--radius-xs);
       font-size: .8rem;
       color: var(--text-dim);
@@ -670,7 +725,7 @@
     }
 
     .bi-sim-note strong {
-      color: var(--gold);
+      color: var(--gold-bright);
     }
 
     .divider-v {
@@ -842,22 +897,25 @@
       border-radius: 999px;
       overflow: hidden;
       display: flex;
+      border: 1px solid var(--border);
     }
 
     .bar-fill-a {
       height: 100%;
-      background: linear-gradient(90deg, var(--green), #34D399);
+      background: linear-gradient(90deg, #D97706, #FBBF24);
       border-radius: 999px 0 0 999px;
       transition: width .4s cubic-bezier(.4, 0, .2, 1);
       min-width: 4px;
+      box-shadow: 0 0 8px rgba(245, 158, 11, .3);
     }
 
     .bar-fill-b {
       height: 100%;
-      background: linear-gradient(90deg, var(--red), #FB7185);
+      background: linear-gradient(90deg, #0284C7, #38BDF8);
       flex: 1;
       transition: width .4s cubic-bezier(.4, 0, .2, 1);
       min-width: 4px;
+      box-shadow: 0 0 8px rgba(56, 189, 248, .3);
     }
 
     .implicit-note {
@@ -865,8 +923,8 @@
       font-size: .8rem;
       color: var(--text-dim);
       padding: .5rem .85rem;
-      background: rgba(99, 102, 241, .07);
-      border: 1px solid rgba(99, 102, 241, .18);
+      background: rgba(56, 189, 248, .07);
+      border: 1px solid rgba(56, 189, 248, .2);
       border-radius: var(--radius-xs);
       line-height: 1.5;
     }
@@ -915,12 +973,12 @@
     }
 
     .ref-table tbody tr {
-      border-bottom: 1px solid rgba(39, 39, 42, .5);
+      border-bottom: 1px solid rgba(35, 35, 52, .5);
       transition: background var(--transition);
     }
 
     .ref-table tbody tr:hover {
-      background: var(--surface2);
+      background: rgba(245, 158, 11, .04);
     }
 
     .ref-table tbody tr:last-child {
@@ -1128,9 +1186,10 @@
     }
 
     .unit-opt.active {
-      color: var(--gold);
+      color: var(--gold-bright);
       font-weight: 700;
-      background: rgba(245, 158, 11, .15);
+      background: rgba(245, 158, 11, .18);
+      box-shadow: 0 0 8px rgba(245, 158, 11, .12);
     }
 
     .unit-sep {
@@ -1147,7 +1206,7 @@
 
     <!-- ════ HEADER ════ -->
     <header class="app-header">
-      <div class="logo-icon">🪙</div>
+      <img src="logo-pw.png" alt="Logo Perfect World" class="logo-img" />
       <div class="logo-text">
         <h1>Calculador</h1>
         <p>Calculadora de Economia · Perfect World</p>
@@ -1312,7 +1371,7 @@
           <!-- Opção A: Moedas -->
           <div class="compare-side" id="sideA">
             <div class="compare-side-header">
-              <div class="dot" style="background: var(--gold)"></div>
+              <div class="dot" style="background: var(--gold); box-shadow: 0 0 10px rgba(245, 158, 11, .5);"></div>
               Opção A — Via Moedas do Jogo
             </div>
             <div class="field">
@@ -1335,12 +1394,12 @@
           <!-- Opção B: Dinheiro Real -->
           <div class="compare-side" id="sideB">
             <div class="compare-side-header">
-              <div class="dot" style="background: var(--blue)"></div>
+              <div class="dot" style="background: var(--blue); box-shadow: 0 0 10px rgba(56, 189, 248, .5);"></div>
               Opção B — Dinheiro Real / Cash
             </div>
             <div class="field">
               <label class="field-label">Preço em Reais (R$)</label>
-              <input type="text" class="plain-input green" id="cmpB" placeholder="0,00" autocomplete="off"
+              <input type="text" class="plain-input celestial" id="cmpB" placeholder="0,00" autocomplete="off"
                 inputmode="decimal" />
             </div>
             <div class="compare-price" id="cmpBPrice">—</div>
@@ -1367,8 +1426,8 @@
           </div>
           <div class="bar-compare" id="barCompare">
             <div class="bar-compare-label">
-              <span id="barLabelA">Opção A</span>
-              <span id="barLabelB">Opção B</span>
+              <span id="barLabelA" style="color: var(--gold-bright); font-weight: 600;">Opção A</span>
+              <span id="barLabelB" style="color: var(--blue-bright); font-weight: 600;">Opção B</span>
             </div>
             <div class="bar-track">
               <div class="bar-fill-a" id="barFillA" style="width:50%"></div>
