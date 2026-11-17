@@ -1,0 +1,2172 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calculador</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet" />
+  <style>
+    /* ─── Reset & Base ──────────────────────────────────────── */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #09090B;
+      --surface: #121216;
+      --surface2: #18181C;
+      --border: #27272A;
+      --border2: #3F3F46;
+      --text: #FAFAFA;
+      --text-muted: #71717A;
+      --text-dim: #A1A1AA;
+      --gold: #F59E0B;
+      --gold-soft: #FDE68A;
+      --gold-dim: #92400E;
+      --green: #10B981;
+      --green-dim: #064E3B;
+      --red: #F43F5E;
+      --red-dim: #4C0519;
+      --blue: #6366F1;
+      --blue-dim: #1E1B4B;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --radius-xs: 6px;
+      --shadow: 0 4px 24px rgba(0, 0, 0, .45);
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, .3);
+      --transition: 180ms cubic-bezier(.4, 0, .2, 1);
+    }
+
+    html {
+      font-size: 15px;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      min-height: 100vh;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    ::selection {
+      background: rgba(245, 158, 11, .25);
+      color: var(--text);
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border2);
+      border-radius: 99px;
+    }
+
+    /* ─── Layout ─────────────────────────────────────────────── */
+    .app-wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 1.25rem 4rem;
+    }
+
+    /* ─── Header ─────────────────────────────────────────────── */
+    .app-header {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      padding: 1.5rem 0 .5rem;
+    }
+
+    .logo-icon {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, #F59E0B, #D97706);
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      font-size: 1.1rem;
+      box-shadow: 0 0 20px rgba(245, 158, 11, .35);
+      flex-shrink: 0;
+    }
+
+    .logo-text h1 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: -.02em;
+    }
+
+    .logo-text p {
+      font-size: .78rem;
+      color: var(--text-muted);
+    }
+
+    /* ─── Cotação Bar ─────────────────────────────────────────── */
+    .cotacao-bar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(9, 9, 11, .85);
+      backdrop-filter: blur(16px) saturate(1.4);
+      -webkit-backdrop-filter: blur(16px) saturate(1.4);
+      border-bottom: 1px solid var(--border);
+      padding: .75rem 0;
+      margin: 0 -1.25rem;
+      padding-left: 1.25rem;
+      padding-right: 1.25rem;
+    }
+
+    .cotacao-inner {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .cotacao-label {
+      font-size: .78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      white-space: nowrap;
+    }
+
+    .cotacao-prefix {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .88rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .cotacao-input-wrap {
+      display: flex;
+      align-items: center;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      padding: 0 .6rem;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+
+    .cotacao-input-wrap:focus-within {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, .18);
+    }
+
+    .cotacao-input-wrap input {
+      background: transparent;
+      border: none;
+      color: var(--gold);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .95rem;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      padding: .42rem 0;
+      width: 90px;
+      outline: none;
+      text-align: left;
+    }
+
+    .cotacao-input-wrap input::placeholder {
+      color: var(--text-muted);
+      opacity: 1;
+    }
+
+    .cotacao-pills {
+      display: flex;
+      gap: .5rem;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: .28rem .75rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .78rem;
+      font-variant-numeric: tabular-nums;
+      color: var(--text-dim);
+    }
+
+    .pill .label {
+      font-family: 'Inter', sans-serif;
+      color: var(--text-muted);
+      font-size: .73rem;
+    }
+
+    .pill .value {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .pill.gold {
+      border-color: rgba(245, 158, 11, .35);
+      background: rgba(245, 158, 11, .08);
+    }
+
+    .pill.gold .value {
+      color: var(--gold);
+    }
+
+    /* ─── Section Headers ─────────────────────────────────────── */
+    .section {
+      margin-top: 1.75rem;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      margin-bottom: 1rem;
+    }
+
+    .section-badge {
+      width: 24px;
+      height: 24px;
+      background: rgba(245, 158, 11, .12);
+      border: 1px solid rgba(245, 158, 11, .3);
+      border-radius: 6px;
+      display: grid;
+      place-items: center;
+      font-size: .7rem;
+      font-weight: 700;
+      color: var(--gold);
+      flex-shrink: 0;
+    }
+
+    .section-title {
+      font-size: .9rem;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -.01em;
+    }
+
+    .section-subtitle {
+      font-size: .78rem;
+      color: var(--text-muted);
+      margin-left: auto;
+    }
+
+    /* ─── Cards ──────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .card.glass {
+      background: rgba(18, 18, 22, .7);
+      backdrop-filter: blur(12px);
+    }
+
+    .card-row {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .card-row.cols-2 {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .card-row.cols-3 {
+      grid-template-columns: 1fr 1fr 1fr;
+    }
+
+    /* ─── Form controls ──────────────────────────────────────── */
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: .35rem;
+    }
+
+    .field-label {
+      font-size: .75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    .input-group {
+      display: flex;
+    }
+
+    .input-group input {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .95rem;
+      font-variant-numeric: tabular-nums;
+      padding: .6rem .85rem;
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition);
+      min-width: 0;
+    }
+
+    .input-group input:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, .15);
+      z-index: 1;
+    }
+
+    .unit-select {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-left: none;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      color: var(--gold);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .88rem;
+      font-weight: 600;
+      padding: .6rem .75rem;
+      cursor: pointer;
+      outline: none;
+      transition: background var(--transition);
+      appearance: none;
+      -webkit-appearance: none;
+      min-width: 56px;
+      text-align: center;
+    }
+
+    .unit-select:focus {
+      border-color: var(--gold);
+    }
+
+    .unit-select:hover {
+      background: var(--border);
+    }
+
+    .plain-input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .95rem;
+      font-variant-numeric: tabular-nums;
+      padding: .6rem .85rem;
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+
+    .plain-input:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, .15);
+    }
+
+    .plain-input.green:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, .15);
+    }
+
+    .plain-input.red:focus {
+      border-color: var(--red);
+      box-shadow: 0 0 0 3px rgba(244, 63, 94, .15);
+    }
+
+    /* Qty stepper */
+    .qty-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0;
+    }
+
+    .qty-btn {
+      width: 36px;
+      height: 38px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      color: var(--text-dim);
+      font-size: 1rem;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: background var(--transition), color var(--transition);
+      flex-shrink: 0;
+    }
+
+    .qty-btn:first-child {
+      border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+      border-right: none;
+    }
+
+    .qty-btn:last-child {
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      border-left: none;
+    }
+
+    .qty-btn:hover {
+      background: var(--border);
+      color: var(--text);
+    }
+
+    .qty-input {
+      width: 70px;
+      text-align: center;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .95rem;
+      font-variant-numeric: tabular-nums;
+      padding: .45rem .5rem;
+      outline: none;
+      transition: border-color var(--transition);
+      -moz-appearance: textfield;
+    }
+
+    .qty-input::-webkit-inner-spin-button,
+    .qty-input::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+    }
+
+    .qty-input:focus {
+      border-color: var(--gold);
+      z-index: 1;
+    }
+
+    /* ─── Buttons ─────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: .4rem;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      font-size: .82rem;
+      font-weight: 600;
+      padding: .5rem 1rem;
+      transition: all var(--transition);
+      white-space: nowrap;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border2);
+      color: var(--text-muted);
+    }
+
+    .btn-ghost:hover {
+      background: var(--surface2);
+      color: var(--text);
+      border-color: var(--border2);
+    }
+
+    .btn-gold {
+      background: rgba(245, 158, 11, .12);
+      border: 1px solid rgba(245, 158, 11, .3);
+      color: var(--gold);
+    }
+
+    .btn-gold:hover {
+      background: rgba(245, 158, 11, .2);
+    }
+
+    .btn-green {
+      background: rgba(16, 185, 129, .12);
+      border: 1px solid rgba(16, 185, 129, .3);
+      color: var(--green);
+    }
+
+    .btn-green:hover {
+      background: rgba(16, 185, 129, .2);
+    }
+
+    .btn-copy {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: .28rem .6rem;
+      font-size: .72rem;
+      border-radius: var(--radius-xs);
+    }
+
+    .btn-copy:hover {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
+    .btn-copy.copied {
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    .btn-danger-ghost {
+      background: transparent;
+      border: 1px solid var(--border2);
+      color: var(--red);
+    }
+
+    .btn-danger-ghost:hover {
+      background: rgba(244, 63, 94, .08);
+      border-color: var(--red);
+    }
+
+    /* ─── Result Cards ───────────────────────────────────────── */
+    .result-grid {
+      display: grid;
+      gap: .75rem;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      margin-top: 1rem;
+    }
+
+    .result-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: .9rem 1rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .result-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent, var(--border));
+      opacity: .7;
+    }
+
+    .result-card.accent-gold {
+      --accent: var(--gold);
+    }
+
+    .result-card.accent-green {
+      --accent: var(--green);
+    }
+
+    .result-card.accent-blue {
+      --accent: var(--blue);
+    }
+
+    .result-card-label {
+      font-size: .72rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: .3rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .result-card-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-variant-numeric: tabular-nums;
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.3;
+    }
+
+    .result-card-sub {
+      font-family: 'JetBrains Mono', monospace;
+      font-variant-numeric: tabular-nums;
+      font-size: .72rem;
+      color: var(--text-muted);
+      margin-top: .15rem;
+    }
+
+    .result-card.accent-gold .result-card-value {
+      color: var(--gold);
+    }
+
+    .result-card.accent-green .result-card-value {
+      color: var(--green);
+    }
+
+    /* ─── Simulador BI Card ──────────────────────────────────── */
+    .bi-sim-card {
+      margin-top: 1rem;
+      background: rgba(245, 158, 11, .06);
+      border: 1px solid rgba(245, 158, 11, .22);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+    }
+
+    .bi-sim-card .header {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      margin-bottom: .6rem;
+      font-size: .78rem;
+      font-weight: 700;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    .bi-sim-card .header svg {
+      opacity: .8;
+    }
+
+    .bi-sim-body {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: .75rem;
+    }
+
+    .bi-stat {
+      text-align: center;
+    }
+
+    .bi-stat .num {
+      font-family: 'JetBrains Mono', monospace;
+      font-variant-numeric: tabular-nums;
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--gold-soft);
+      line-height: 1.2;
+    }
+
+    .bi-stat .lbl {
+      font-size: .72rem;
+      color: var(--text-muted);
+      margin-top: .2rem;
+    }
+
+    .bi-sim-note {
+      margin-top: .75rem;
+      padding: .6rem .85rem;
+      background: rgba(245, 158, 11, .08);
+      border-radius: var(--radius-xs);
+      font-size: .8rem;
+      color: var(--text-dim);
+      line-height: 1.5;
+    }
+
+    .bi-sim-note strong {
+      color: var(--gold);
+    }
+
+    .divider-v {
+      width: 1px;
+      background: rgba(245, 158, 11, .18);
+      align-self: stretch;
+    }
+
+    /* ─── Comparador ─────────────────────────────────────────── */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .compare-side {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.1rem;
+      display: flex;
+      flex-direction: column;
+      gap: .75rem;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+
+    .compare-side.winner {
+      border-color: var(--green);
+      box-shadow: 0 0 0 1px var(--green), 0 0 24px rgba(16, 185, 129, .12);
+    }
+
+    .compare-side.loser {
+      opacity: .65;
+    }
+
+    .compare-side-header {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      font-size: .82rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    .compare-side-header .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .compare-side.winner .compare-side-header {
+      color: var(--green);
+    }
+
+    .compare-price {
+      font-family: 'JetBrains Mono', monospace;
+      font-variant-numeric: tabular-nums;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.2;
+    }
+
+    .compare-side.winner .compare-price {
+      color: var(--green);
+    }
+
+    .compare-side.loser .compare-price {
+      color: var(--red);
+    }
+
+    .winner-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .3rem;
+      background: rgba(16, 185, 129, .15);
+      border: 1px solid rgba(16, 185, 129, .35);
+      border-radius: 999px;
+      padding: .22rem .7rem;
+      font-size: .72rem;
+      font-weight: 700;
+      color: var(--green);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    /* Verdict card */
+    .verdict-card {
+      margin-top: 1rem;
+      border-radius: var(--radius);
+      padding: 1.1rem 1.25rem;
+      background: rgba(16, 185, 129, .06);
+      border: 1px solid rgba(16, 185, 129, .25);
+    }
+
+    .verdict-card.red-verdict {
+      background: rgba(244, 63, 94, .06);
+      border-color: rgba(244, 63, 94, .25);
+    }
+
+    .verdict-card.neutral {
+      background: var(--surface2);
+      border-color: var(--border);
+    }
+
+    .verdict-title {
+      font-size: .78rem;
+      font-weight: 700;
+      color: var(--green);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: .5rem;
+    }
+
+    .verdict-card.red-verdict .verdict-title {
+      color: var(--red);
+    }
+
+    .verdict-card.neutral .verdict-title {
+      color: var(--text-muted);
+    }
+
+    .verdict-row {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: .6rem;
+    }
+
+    .verdict-stat {
+      flex: 1;
+      min-width: 120px;
+    }
+
+    .verdict-stat .n {
+      font-family: 'JetBrains Mono', monospace;
+      font-variant-numeric: tabular-nums;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .verdict-stat .l {
+      font-size: .72rem;
+      color: var(--text-muted);
+    }
+
+    /* Progress bar compare */
+    .bar-compare {
+      margin-top: .75rem;
+    }
+
+    .bar-compare-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: .72rem;
+      color: var(--text-muted);
+      margin-bottom: .3rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .bar-track {
+      height: 8px;
+      background: var(--surface2);
+      border-radius: 999px;
+      overflow: hidden;
+      display: flex;
+    }
+
+    .bar-fill-a {
+      height: 100%;
+      background: linear-gradient(90deg, var(--green), #34D399);
+      border-radius: 999px 0 0 999px;
+      transition: width .4s cubic-bezier(.4, 0, .2, 1);
+      min-width: 4px;
+    }
+
+    .bar-fill-b {
+      height: 100%;
+      background: linear-gradient(90deg, var(--red), #FB7185);
+      flex: 1;
+      transition: width .4s cubic-bezier(.4, 0, .2, 1);
+      min-width: 4px;
+    }
+
+    .implicit-note {
+      margin-top: .6rem;
+      font-size: .8rem;
+      color: var(--text-dim);
+      padding: .5rem .85rem;
+      background: rgba(99, 102, 241, .07);
+      border: 1px solid rgba(99, 102, 241, .18);
+      border-radius: var(--radius-xs);
+      line-height: 1.5;
+    }
+
+    .implicit-note strong {
+      color: var(--blue);
+    }
+
+    /* ─── Conversor Rápido ───────────────────────────────────── */
+    .conv-grid {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto 1fr;
+      gap: .5rem;
+      align-items: end;
+      margin-top: .5rem;
+    }
+
+    .conv-arrow {
+      color: var(--text-muted);
+      font-size: .9rem;
+      padding-bottom: .65rem;
+      text-align: center;
+    }
+
+    /* ─── Tabela ─────────────────────────────────────────────── */
+    .ref-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .85rem;
+      margin-top: .5rem;
+    }
+
+    .ref-table thead th {
+      padding: .5rem .85rem;
+      text-align: right;
+      font-size: .72rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .ref-table thead th:first-child {
+      text-align: left;
+    }
+
+    .ref-table tbody tr {
+      border-bottom: 1px solid rgba(39, 39, 42, .5);
+      transition: background var(--transition);
+    }
+
+    .ref-table tbody tr:hover {
+      background: var(--surface2);
+    }
+
+    .ref-table tbody tr:last-child {
+      border-bottom: none;
+    }
+
+    .ref-table td {
+      padding: .55rem .85rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-variant-numeric: tabular-nums;
+      font-size: .85rem;
+      text-align: right;
+      color: var(--text-dim);
+    }
+
+    .ref-table td:first-child {
+      text-align: left;
+      font-weight: 600;
+      color: var(--gold-soft);
+    }
+
+    .ref-table td.hl {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .ref-table td.green {
+      color: var(--green);
+    }
+
+    .ref-table tr.sep td {
+      background: rgba(245, 158, 11, .04);
+    }
+
+    /* ─── Toast ──────────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      padding: .6rem 1rem;
+      font-size: .82rem;
+      color: var(--text);
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      transform: translateY(calc(100% + 2rem));
+      opacity: 0;
+      transition: transform .25s cubic-bezier(.34, 1.56, .64, 1), opacity .25s;
+      z-index: 999;
+      max-width: 280px;
+    }
+
+    #toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    #toast .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      flex-shrink: 0;
+    }
+
+    /* ─── Responsive ─────────────────────────────────────────── */
+    @media (max-width: 700px) {
+      .card-row.cols-2 {
+        grid-template-columns: 1fr;
+      }
+
+      .card-row.cols-3 {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .compare-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .bi-sim-body {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .conv-grid {
+        grid-template-columns: 1fr 1fr 1fr;
+      }
+
+      .conv-arrow {
+        display: none;
+      }
+
+      .cotacao-inner {
+        gap: .6rem;
+      }
+
+      .result-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .card-row.cols-3 {
+        grid-template-columns: 1fr;
+      }
+
+      .cotacao-pills {
+        flex-direction: column;
+        gap: .3rem;
+      }
+    }
+
+    /* ─── Utility ────────────────────────────────────────────── */
+    .hidden {
+      display: none !important;
+    }
+
+    .mt-1 {
+      margin-top: .5rem;
+    }
+
+    .mt-2 {
+      margin-top: 1rem;
+    }
+
+    .flex-row {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+    }
+
+    .text-muted {
+      color: var(--text-muted);
+      font-size: .82rem;
+    }
+
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .sep-line {
+      height: 1px;
+      background: var(--border);
+      margin: 1.25rem 0;
+    }
+
+    /* ─── Shimmer pulse for empty values ───────────────────────── */
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: .4
+      }
+
+      50% {
+        opacity: .7
+      }
+    }
+
+    .pulse {
+      animation: pulse 2s infinite;
+    }
+
+    /* ─── Calc button inline fix ──────────────────────────────── */
+    #calcBtn {
+      height: 100%;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+    }
+
+    /* ─── Unit Toggle kk / bi ─────────────────────────────────── */
+    .unit-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-left: none;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      padding: 0 .5rem;
+      cursor: pointer;
+      user-select: none;
+      min-width: 72px;
+      justify-content: center;
+    }
+
+    .unit-toggle:hover {
+      background: var(--border);
+    }
+
+    .unit-opt {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .82rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      padding: .15rem .3rem;
+      border-radius: 4px;
+      transition: all var(--transition);
+    }
+
+    .unit-opt.active {
+      color: var(--gold);
+      font-weight: 700;
+      background: rgba(245, 158, 11, .15);
+    }
+
+    .unit-sep {
+      color: var(--border2);
+      font-size: .78rem;
+      margin: 0 .1rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app-wrap">
+
+    <!-- ════ HEADER ════ -->
+    <header class="app-header">
+      <div class="logo-icon">🪙</div>
+      <div class="logo-text">
+        <h1>Calculador</h1>
+        <p>Calculadora de Economia · Perfect World</p>
+      </div>
+    </header>
+
+    <!-- ════ COTAÇÃO BAR ════ -->
+    <div class="cotacao-bar">
+      <div class="cotacao-inner">
+        <span class="cotacao-label">Cotação</span>
+        <div style="display:flex; align-items:center; gap:.4rem;">
+          <span
+            style="font-family:'JetBrains Mono',monospace; font-size:.88rem; color:var(--text-muted); white-space:nowrap;">1
+            bi =</span>
+          <span
+            style="font-family:'JetBrains Mono',monospace; font-size:.88rem; font-weight:600; color:var(--text-muted);">R$</span>
+          <div class="cotacao-input-wrap">
+            <input type="text" id="biRate" placeholder="28,00" autocomplete="off" inputmode="decimal" />
+          </div>
+          <button class="btn btn-gold" id="biCalcBtn" title="Atualizar cotação (Enter)"
+            style="padding:.42rem .9rem; font-size:.8rem; border-radius:var(--radius-sm); flex-shrink:0; height:100%;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 12a8 8 0 0 1-8 8M4 12a8 8 0 0 1 8-8M20 4l-2 2 2 2M4 8l2-2-2-2" />
+            </svg>
+            Atualizar
+          </button>
+        </div>
+        <div class="cotacao-pills">
+          <div class="pill gold">
+            <span class="label">1 kk =</span>
+            <span class="value mono" id="pill-kk">R$ 0,028</span>
+          </div>
+          <div class="pill">
+            <span class="label">R$ 1,00 =</span>
+            <span class="value mono" id="pill-rl">35,714 kk</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ MÓDULO 1: CALCULADORA ════ -->
+    <section class="section">
+      <div class="section-header">
+        <div class="section-badge">1</div>
+        <span class="section-title">Calculadora de Item e Lote</span>
+        <span class="section-subtitle text-muted">kk / bi → R$</span>
+      </div>
+
+      <div class="card">
+        <div class="card-row cols-2">
+          <div class="field">
+            <label class="field-label">Preço Unitário</label>
+            <div style="display:flex; gap:.5rem; align-items:stretch;">
+              <div class="input-group" style="flex:1;">
+                <input type="text" id="itemPrice" placeholder="0" autocomplete="off" inputmode="decimal" />
+                <!-- Toggle kk / bi -->
+                <div class="unit-toggle" id="unitToggle" title="Clique para alternar entre kk e bi">
+                  <span class="unit-opt active" data-val="kk">kk</span>
+                  <span class="unit-sep">/</span>
+                  <span class="unit-opt" data-val="bi">bi</span>
+                </div>
+                <input type="hidden" id="itemUnit" value="kk" />
+              </div>
+              <button class="btn btn-gold" id="calcBtn" title="Calcular (Enter)"
+                style="padding:.6rem 1.1rem; font-size:.82rem; border-radius:var(--radius-sm); flex-shrink:0;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+                Calcular
+              </button>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-label">Quantidade</label>
+            <div class="qty-wrap">
+              <button class="qty-btn" id="qtyMinus">−</button>
+              <input class="qty-input" type="number" id="itemQty" value="1" min="1" max="99999" />
+              <button class="qty-btn" id="qtyPlus">+</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Results -->
+        <div class="result-grid" id="resultGrid">
+          <div class="result-card">
+            <div class="result-card-label">
+              Custo Unitário
+              <button class="btn-copy btn" onclick="copyVal('unitBRL')" title="Copiar">⎘</button>
+            </div>
+            <div class="result-card-value" id="unitBRL">—</div>
+            <div class="result-card-sub" id="unitBRLexact">—</div>
+          </div>
+          <div class="result-card accent-gold" id="cardKK">
+            <div class="result-card-label">
+              <span id="labelKK">Total em kk</span>
+              <button class="btn-copy btn" onclick="copyVal('totalKK')" title="Copiar">⎘</button>
+            </div>
+            <div class="result-card-value" id="totalKK">—</div>
+            <div class="result-card-sub" id="subKK">—</div>
+          </div>
+          <div class="result-card" id="cardBI">
+            <div class="result-card-label">
+              <span id="labelBI">Total em bi</span>
+              <button class="btn-copy btn" onclick="copyVal('totalBI')" title="Copiar">⎘</button>
+            </div>
+            <div class="result-card-value" id="totalBI">—</div>
+            <div class="result-card-sub" id="subBI">—</div>
+          </div>
+          <div class="result-card accent-green">
+            <div class="result-card-label">
+              Total Exato em R$
+              <button class="btn-copy btn" onclick="copyVal('totalBRL')" title="Copiar">⎘</button>
+            </div>
+            <div class="result-card-value" id="totalBRL">—</div>
+            <div class="result-card-sub" id="totalBRLsub">—</div>
+          </div>
+        </div>
+
+        <!-- Simulador BI -->
+        <div class="bi-sim-card" id="biSimCard">
+          <div class="header">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+              stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 8v4l3 3" />
+            </svg>
+            Simulador de Pacote Fechado (bi)
+          </div>
+          <div class="bi-sim-body">
+            <div class="bi-stat">
+              <div class="num" id="simBiCount">—</div>
+              <div class="lbl">bi inteiros necessários</div>
+            </div>
+            <div class="divider-v"></div>
+            <div class="bi-stat">
+              <div class="num" id="simBiCost">—</div>
+              <div class="lbl">custo do pacote fechado</div>
+            </div>
+            <div class="divider-v"></div>
+            <div class="bi-stat">
+              <div class="num" id="simBiChange">—</div>
+              <div class="lbl">troco na bag</div>
+            </div>
+          </div>
+          <div class="bi-sim-note" id="simNote">Configure o preço do item acima para ver a simulação.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════ MÓDULO 2: COMPARADOR ════ -->
+    <section class="section">
+      <div class="section-header">
+        <div class="section-badge">2</div>
+        <span class="section-title">Comparador Inteligente</span>
+        <span class="section-subtitle text-muted">bi/kk vs Dinheiro Real</span>
+      </div>
+
+      <div class="card">
+        <div class="compare-grid">
+          <!-- Opção A: Moedas -->
+          <div class="compare-side" id="sideA">
+            <div class="compare-side-header">
+              <div class="dot" style="background: var(--gold)"></div>
+              Opção A — Via Moedas do Jogo
+            </div>
+            <div class="field">
+              <label class="field-label">Preço em Moedas</label>
+              <div class="input-group">
+                <input type="text" id="cmpA" placeholder="0" autocomplete="off" inputmode="decimal" />
+                <!-- Toggle kk / bi do Comparador -->
+                <div class="unit-toggle" id="cmpToggle" title="Clique para alternar entre kk e bi">
+                  <span class="unit-opt active" data-val="kk" id="cmpOptKK">kk</span>
+                  <span class="unit-sep">/</span>
+                  <span class="unit-opt" data-val="bi" id="cmpOptBI">bi</span>
+                </div>
+                <input type="hidden" id="cmpAUnit" value="kk" />
+              </div>
+            </div>
+            <div class="compare-price" id="cmpAPrice">—</div>
+            <div class="text-muted" id="cmpANote">custo em Reais (cotação atual)</div>
+          </div>
+
+          <!-- Opção B: Dinheiro Real -->
+          <div class="compare-side" id="sideB">
+            <div class="compare-side-header">
+              <div class="dot" style="background: var(--blue)"></div>
+              Opção B — Dinheiro Real / Cash
+            </div>
+            <div class="field">
+              <label class="field-label">Preço em Reais (R$)</label>
+              <input type="text" class="plain-input green" id="cmpB" placeholder="0,00" autocomplete="off"
+                inputmode="decimal" />
+            </div>
+            <div class="compare-price" id="cmpBPrice">—</div>
+            <div class="text-muted" id="cmpBNote">preço direto em dinheiro real</div>
+          </div>
+        </div>
+
+        <!-- Verdict -->
+        <div class="verdict-card neutral" id="verdictCard">
+          <div class="verdict-title" id="verdictTitle">⟳ Preencha os dois campos para ver o veredito</div>
+          <div class="verdict-row" id="verdictRow">
+            <div class="verdict-stat">
+              <div class="n" id="vEco">—</div>
+              <div class="l">Economia em R$</div>
+            </div>
+            <div class="verdict-stat">
+              <div class="n" id="vEcoKK">—</div>
+              <div class="l">Equivalente em kk</div>
+            </div>
+            <div class="verdict-stat">
+              <div class="n" id="vPct">—</div>
+              <div class="l">Vantagem (%)</div>
+            </div>
+          </div>
+          <div class="bar-compare" id="barCompare">
+            <div class="bar-compare-label">
+              <span id="barLabelA">Opção A</span>
+              <span id="barLabelB">Opção B</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill-a" id="barFillA" style="width:50%"></div>
+              <div class="bar-fill-b" id="barFillB" style="flex:1"></div>
+            </div>
+          </div>
+          <div class="implicit-note" id="implicitNote" style="display:none"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════ MÓDULO 3: CONVERSOR & TABELA DE REFERÊNCIA ════ -->
+    <section class="section">
+      <div class="section-header">
+        <div class="section-badge">3</div>
+        <span class="section-title">Conversor Rápido Bidirecional</span>
+      </div>
+
+      <div class="card">
+        <div class="conv-grid">
+          <div class="field">
+            <label class="field-label">Reais (R$)</label>
+            <input type="text" class="plain-input" id="convBRL" placeholder="0,00" autocomplete="off"
+              inputmode="decimal" />
+          </div>
+          <div class="conv-arrow">⇄</div>
+          <div class="field">
+            <label class="field-label">kk</label>
+            <input type="text" class="plain-input" id="convKK" placeholder="0" autocomplete="off" inputmode="decimal" />
+          </div>
+          <div class="conv-arrow">⇄</div>
+          <div class="field">
+            <label class="field-label">bi</label>
+            <input type="text" class="plain-input" id="convBI" placeholder="0" autocomplete="off" inputmode="decimal" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tabela -->
+    <section class="section">
+      <div class="section-header">
+        <div class="section-badge">📊</div>
+        <span class="section-title">Tabela de Referência Rápida</span>
+      </div>
+      <div class="card" style="padding: .75rem 0">
+        <table class="ref-table" id="refTable">
+          <thead>
+            <tr>
+              <th>Valor</th>
+              <th>Em kk</th>
+              <th>Em bi</th>
+              <th>Em R$</th>
+            </tr>
+          </thead>
+          <tbody id="refBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </div><!-- /app-wrap -->
+
+  <!-- Toast -->
+  <div id="toast">
+    <div class="dot"></div><span id="toastMsg">Copiado!</span>
+  </div>
+
+  <script>
+    /* ═══════════════════════════════════════════════════════════
+       STATE
+    ══════════════════════════════════════════════════════════ */
+    let biRate = 28;    // R$ por 1 bi
+    let convLock = false;
+
+    /* ═══════════════════════════════════════════════════════════
+       UTILS & FORMATAÇÃO BRASILEIRA (pt-BR)
+    ══════════════════════════════════════════════════════════ */
+    const $ = id => document.getElementById(id);
+
+    // Converte strings no formato brasileiro ou numérico para float seguro
+    function parseBR(str) {
+      if (!str && str !== 0) return NaN;
+      str = String(str).trim().replace(/[^\d.,]/g, '');
+      if (!str) return NaN;
+
+      if (str.includes('.') && str.includes(',')) {
+        if (str.lastIndexOf(',') > str.lastIndexOf('.')) {
+          // 1.250,50 -> 1250.50
+          str = str.replace(/\./g, '').replace(',', '.');
+        } else {
+          // 1,250.50 -> 1250.50
+          str = str.replace(/,/g, '');
+        }
+      } else if (str.includes(',')) {
+        const commaCount = (str.match(/,/g) || []).length;
+        if (commaCount > 1) {
+          str = str.replace(/,/g, '');
+        } else {
+          str = str.replace(',', '.');
+        }
+      } else if (str.includes('.')) {
+        const dotCount = (str.match(/\./g) || []).length;
+        if (dotCount > 1) {
+          // 1.000.000 -> 1000000
+          str = str.replace(/\./g, '');
+        } else {
+          const parts = str.split('.');
+          if (parts[1].length === 3 && parts[0].length >= 1 && parts[0].length <= 3 && parts[0] !== '0') {
+            // 1.000 ou 50.000 -> 1000 ou 50000
+            str = parts[0] + parts[1];
+          } else {
+            // 28.5 ou 28.00 ou 0.028
+            str = parts[0] + '.' + parts[1];
+          }
+        }
+      }
+      return parseFloat(str);
+    }
+
+    // Formata valores em Reais no padrão brasileiro (ex: R$ 1.250,00, R$ 28,00 ou R$ 0,028 para frações)
+    function fmtBRL(n, decimals) {
+      if (!isFinite(n)) return '—';
+      if (decimals === undefined) {
+        decimals = (n > 0 && n < 0.10) ? 3 : 2;
+      }
+      return 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    }
+
+    // Formata número cru em Reais no padrão brasileiro (ex: 1.250,00 ou 28,00)
+    function fmtBRLraw(n, decimals = 2) {
+      if (!isFinite(n)) return '';
+      return n.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    }
+
+    // Formata valores em KK com separador de milhar (ex: 1.000 kk, 10.000 kk)
+    function fmtKK(n, maxDecimals = 3) {
+      if (!isFinite(n)) return '—';
+      return n.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: maxDecimals }) + '\u00a0kk';
+    }
+
+    // Formata valores em BI com separador e decimais corretos (ex: 1 bi, 2,5 bi, 10 bi)
+    function fmtBI(n, maxDecimals = 4) {
+      if (!isFinite(n)) return '—';
+      return n.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: maxDecimals }) + '\u00a0bi';
+    }
+
+    // Formata números gerais com padrão brasileiro de pontos e vírgulas
+    function fmtNumBR(n, maxDecimals = 4) {
+      if (!isFinite(n)) return '—';
+      return n.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: maxDecimals });
+    }
+
+    // Formata porcentagens com vírgula (ex: 12,50%)
+    function fmtPct(n) {
+      if (!isFinite(n)) return '—';
+      return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       COTAÇÃO
+    ══════════════════════════════════════════════════════════ */
+    function initRate() {
+      const saved = localStorage.getItem('pw_bi_rate');
+      const inp = $('biRate');
+      if (saved) {
+        biRate = parseFloat(saved);
+        inp.value = fmtBRLraw(biRate);
+      } else {
+        inp.value = '28,00';
+        biRate = 28;
+      }
+      updatePills();
+    }
+
+    function updatePills() {
+      const kkRate = biRate / 1000;
+      const rlKK = 1 / kkRate;
+      $('pill-kk').textContent = 'R$\u00a0' + kkRate.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 6 });
+      $('pill-rl').textContent = rlKK.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + '\u00a0kk';
+    }
+
+    $('biRate').addEventListener('input', () => {
+      const v = parseBR($('biRate').value);
+      if (v > 0) {
+        biRate = v;
+        localStorage.setItem('pw_bi_rate', v);
+        updatePills();
+        calcItem();
+        calcCompare();
+        calcConv('none');
+        renderTable();
+      }
+    });
+
+    // Formata o campo ao pressionar Enter e dispara cálculo
+    function applyBiRate() {
+      const v = parseBR($('biRate').value);
+      if (v > 0) {
+        biRate = v;
+        localStorage.setItem('pw_bi_rate', v);
+        $('biRate').value = fmtBRLraw(v, 2);  // Formata: 28 → 28,00
+        updatePills();
+        calcItem();
+        calcCompare();
+        calcConv('none');
+        renderTable();
+        flashBiBtn();
+      }
+    }
+
+    function flashBiBtn() {
+      const btn = $('biCalcBtn');
+      if (!btn) return;
+      btn.classList.add('btn-green');
+      btn.classList.remove('btn-gold');
+      btn.innerHTML = '✓ Atualizado!';
+      setTimeout(() => {
+        btn.classList.remove('btn-green');
+        btn.classList.add('btn-gold');
+        btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 0 1-8 8M4 12a8 8 0 0 1 8-8M20 4l-2 2 2 2M4 8l2-2-2-2"/></svg> Atualizar`;
+      }, 1200);
+    }
+
+    $('biRate').addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); applyBiRate(); }
+    });
+
+    $('biRate').addEventListener('blur', () => {
+      const v = parseBR($('biRate').value);
+      if (v > 0) $('biRate').value = fmtBRLraw(v, 2);
+      biRateWasAllSelected = false;
+    });
+
+    // 1º clique seleciona tudo | clique a mais tira seleção para editar número por número
+    let biRateWasAllSelected = false;
+
+    $('biRate').addEventListener('mousedown', function () {
+      biRateWasAllSelected = (this.selectionStart === 0 && this.selectionEnd === this.value.length && this.value.length > 0);
+    });
+
+    $('biRate').addEventListener('click', function () {
+      if (biRateWasAllSelected) {
+        biRateWasAllSelected = false;
+      } else {
+        this.select();
+      }
+    });
+
+    $('biCalcBtn').addEventListener('click', applyBiRate);
+
+    /* ═══════════════════════════════════════════════════════════
+       MÓDULO 1 — CALCULADORA DE ITEM E LOTE
+    ══════════════════════════════════════════════════════════ */
+    function getItemKK() {
+      const price = parseBR($('itemPrice').value);
+      const unit = $('itemUnit').value;
+      const qty = parseInt($('itemQty').value) || 1;
+      if (!isFinite(price) || price <= 0) return { valid: false };
+      const unitKK = unit === 'bi' ? price * 1000 : price;
+      const totalKK = unitKK * qty;
+      return { valid: true, unitKK, totalKK, qty, unitPriceRaw: price };
+    }
+
+    // Formata o input de preço de acordo com a unidade selecionada (KK vs BI)
+    function formatItemPriceInput() {
+      const p = parseBR($('itemPrice').value);
+      if (!isFinite(p) || p <= 0) return;
+      const unit = $('itemUnit').value;
+      if (unit === 'kk') {
+        $('itemPrice').value = p.toLocaleString('pt-BR', { maximumFractionDigits: 3 });
+      } else {
+        $('itemPrice').value = p.toLocaleString('pt-BR', { maximumFractionDigits: 4 });
+      }
+    }
+
+    // Seleção de clique inteligente no input de preço
+    let itemPriceWasAllSelected = false;
+    $('itemPrice').addEventListener('mousedown', function () {
+      itemPriceWasAllSelected = (this.selectionStart === 0 && this.selectionEnd === this.value.length && this.value.length > 0);
+    });
+    $('itemPrice').addEventListener('click', function () {
+      if (itemPriceWasAllSelected) {
+        itemPriceWasAllSelected = false;
+      } else {
+        this.select();
+      }
+    });
+    $('itemPrice').addEventListener('blur', () => {
+      formatItemPriceInput();
+      itemPriceWasAllSelected = false;
+    });
+
+    function calcItem() {
+      const d = getItemKK();
+      const unit = $('itemUnit').value;
+
+      if (!d.valid) {
+        ['unitBRL', 'unitBRLexact', 'totalKK', 'totalBI', 'totalBRL'].forEach(id => { $(id).textContent = '—'; });
+        $('subKK').textContent = '—';
+        $('subBI').textContent = '—';
+        $('totalBRLsub').textContent = '—';
+        $('simBiCount').textContent = $('simBiCost').textContent = $('simBiChange').textContent = '—';
+        $('simNote').textContent = 'Configure o preço do item acima para ver a simulação.';
+        return;
+      }
+
+      const { unitKK, totalKK, qty } = d;
+      const kkRate = biRate / 1000;
+      const unitBRL = unitKK * kkRate;
+      const totalBRL = totalKK * kkRate;
+      const totalBI = totalKK / 1000;
+
+      // Custo Unitário em R$
+      $('unitBRL').textContent = fmtBRL(unitBRL);
+      $('unitBRLexact').textContent = `exato: ${fmtBRL(unitBRL, 4)} · 1 ${unit}`;
+
+      // Separação e formatação visual dos valores conforme KK ou BI
+      const cardKK = $('cardKK');
+      const cardBI = $('cardBI');
+      const labelKK = $('labelKK');
+      const labelBI = $('labelBI');
+      const subKK = $('subKK');
+      const subBI = $('subBI');
+
+      if (unit === 'kk') {
+        // Quando estiver selecionado KK: destaque em KK
+        cardKK.classList.add('accent-gold');
+        cardBI.classList.remove('accent-gold');
+        cardKK.style.order = '1';
+        cardBI.style.order = '2';
+
+        labelKK.textContent = 'Total do Lote (kk)';
+        $('totalKK').textContent = fmtKK(totalKK);
+        subKK.textContent = `(= ${fmtBI(totalBI)})`;
+
+        labelBI.textContent = 'Equivalente em bi';
+        $('totalBI').textContent = fmtBI(totalBI);
+        subBI.textContent = 'conversão automática';
+
+        const changeKK = (Math.ceil(totalBI) - totalBI) * 1000;
+        $('simBiChange').textContent = fmtKK(changeKK);
+      } else {
+        // Quando estiver selecionado BI: destaque em BI
+        cardBI.classList.add('accent-gold');
+        cardKK.classList.remove('accent-gold');
+        cardBI.style.order = '1';
+        cardKK.style.order = '2';
+
+        labelBI.textContent = 'Total do Lote (bi)';
+        $('totalBI').textContent = fmtBI(totalBI);
+        subBI.textContent = `(= ${fmtKK(totalKK)})`;
+
+        labelKK.textContent = 'Equivalente em kk';
+        $('totalKK').textContent = fmtKK(totalKK);
+        subKK.textContent = 'conversão automática';
+
+        const changeKK = (Math.ceil(totalBI) - totalBI) * 1000;
+        $('simBiChange').textContent = fmtBI(changeKK / 1000);
+      }
+
+      // Total Exato em R$
+      $('totalBRL').textContent = fmtBRL(totalBRL);
+      $('totalBRLsub').textContent = `${qty.toLocaleString('pt-BR')} un. × ${fmtBRL(unitBRL)}`;
+
+      // Simulador BI com separadores pt-BR
+      const biNeeded = Math.ceil(totalBI);
+      const biCost = biNeeded * biRate;
+      const changeKK = (biNeeded - totalBI) * 1000;
+
+      $('simBiCount').textContent = biNeeded.toLocaleString('pt-BR');
+      $('simBiCost').textContent = fmtBRL(biCost);
+
+      if (changeKK === 0) {
+        $('simNote').innerHTML = `Comprando <strong>${biNeeded.toLocaleString('pt-BR')} bi fechado${biNeeded > 1 ? 's' : ''}</strong> por <strong>${fmtBRL(biCost)}</strong>, você paga o item exato sem sobrar troco.`;
+      } else if (unit === 'kk') {
+        $('simNote').innerHTML = `Comprando <strong>${biNeeded.toLocaleString('pt-BR')} bi fechado${biNeeded > 1 ? 's' : ''}</strong> por <strong>${fmtBRL(biCost)}</strong>, você paga o item e fica com <strong>${fmtKK(changeKK)}</strong> de troco na bag.`;
+      } else {
+        $('simNote').innerHTML = `Comprando <strong>${biNeeded.toLocaleString('pt-BR')} bi fechado${biNeeded > 1 ? 's' : ''}</strong> por <strong>${fmtBRL(biCost)}</strong>, você paga o item e fica com <strong>${fmtBI(changeKK / 1000)}</strong> (${fmtKK(changeKK)}) de troco na bag.`;
+      }
+
+      // Sync comparador passivo (só quando o campo cmpA estiver vazio)
+      if (!$('cmpA').value.trim()) {
+        const price = parseBR($('itemPrice').value);
+        setCmpUnit(unit, false);
+        $('cmpA').value = unit === 'bi'
+          ? fmtNumBR(price, 4)
+          : fmtNumBR(totalKK, 3);
+        calcCompare();
+      }
+    }
+
+    $('itemQty').addEventListener('input', calcItem);
+
+    /* ─── Toggle kk / bi ──────────────────────────────────── */
+    (function initUnitToggle() {
+      const toggle = $('unitToggle');
+      if (!toggle) return;
+      const opts = toggle.querySelectorAll('.unit-opt');
+      const hidden = $('itemUnit');
+      const priceInput = $('itemPrice');
+
+      toggle.addEventListener('click', () => {
+        const current = hidden.value;
+        const next = current === 'kk' ? 'bi' : 'kk';
+        hidden.value = next;
+        opts.forEach(o => {
+          o.classList.toggle('active', o.dataset.val === next);
+        });
+
+        priceInput.placeholder = '0';
+        formatItemPriceInput();
+        calcItem();
+      });
+    })();
+
+    // Calcular ao pressionar Enter no campo de preço
+    $('itemPrice').addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        formatItemPriceInput();
+        calcItem();
+        syncComparadorForced();
+        flashCalcBtn();
+      }
+    });
+
+    // Botão Calcular (Módulo 1)
+    $('calcBtn').addEventListener('click', () => {
+      formatItemPriceInput();
+      calcItem();
+      syncComparadorForced();
+      flashCalcBtn();
+    });
+
+    // Força sync do comparador
+    function syncComparadorForced() {
+      const d = getItemKK();
+      if (!d.valid) return;
+      const unit = $('itemUnit').value;
+      const price = parseBR($('itemPrice').value);
+      setCmpUnit(unit, false);
+      $('cmpA').value = unit === 'bi'
+        ? fmtNumBR(price, 4)
+        : fmtNumBR(d.totalKK, 3);
+      calcCompare();
+    }
+
+    function flashCalcBtn() {
+      const btn = $('calcBtn');
+      btn.classList.add('btn-green');
+      btn.classList.remove('btn-gold');
+      btn.textContent = '✓ Calculado!';
+      setTimeout(() => {
+        btn.classList.remove('btn-green');
+        btn.classList.add('btn-gold');
+        btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg> Calcular`;
+      }, 1200);
+    }
+
+    $('qtyMinus').addEventListener('click', () => {
+      const v = parseInt($('itemQty').value) || 1;
+      if (v > 1) { $('itemQty').value = v - 1; calcItem(); }
+    });
+    $('qtyPlus').addEventListener('click', () => {
+      $('itemQty').value = (parseInt($('itemQty').value) || 1) + 1;
+      calcItem();
+    });
+
+    /* ─── Copiar ─────────────────────────────────────────── */
+    function copyVal(id) {
+      const el = $(id);
+      const txt = el.textContent.replace(/^R\$[\s\u00a0]*/, '').trim();
+      navigator.clipboard.writeText(txt).then(() => showToast('Valor copiado: ' + txt));
+    }
+    window.copyVal = copyVal;
+
+    /* ═══════════════════════════════════════════════════════════
+       MÓDULO 2 — COMPARADOR INTELIGENTE
+    ══════════════════════════════════════════════════════════ */
+    function calcCompare() {
+      const aRaw = parseBR($('cmpA').value);
+      const aUnit = $('cmpAUnit').value;
+      const bRaw = parseBR($('cmpB').value);
+
+      const kkRate = biRate / 1000;
+      const aKK = isFinite(aRaw) && aRaw > 0
+        ? (aUnit === 'bi' ? aRaw * 1000 : aRaw)
+        : NaN;
+      const aBRL = aKK * kkRate;
+      const bBRL = isFinite(bRaw) && bRaw > 0 ? bRaw : NaN;
+
+      $('cmpAPrice').textContent = isFinite(aBRL) ? fmtBRL(aBRL) : '—';
+      $('cmpBPrice').textContent = isFinite(bBRL) ? fmtBRL(bBRL) : '—';
+
+      // Nota explicativa dinâmica da Opção A
+      if (isFinite(aRaw) && aRaw > 0) {
+        $('cmpANote').textContent = aUnit === 'kk'
+          ? `custo em Reais · equivale a ${fmtBI(aRaw / 1000)}`
+          : `custo em Reais · equivale a ${fmtKK(aRaw * 1000)}`;
+      } else {
+        $('cmpANote').textContent = 'custo em Reais (cotação atual)';
+      }
+
+      const sideA = $('sideA'), sideB = $('sideB');
+      const vc = $('verdictCard');
+      const vt = $('verdictTitle');
+
+      sideA.classList.remove('winner', 'loser');
+      sideB.classList.remove('winner', 'loser');
+      vc.classList.remove('neutral', 'red-verdict');
+
+      if (!isFinite(aBRL) || !isFinite(bBRL)) {
+        vc.classList.add('neutral');
+        vt.textContent = '⟳ Preencha os dois campos para ver o veredito';
+        ['vEco', 'vEcoKK', 'vPct'].forEach(i => { $(i).textContent = '—'; });
+        $('barFillA').style.width = '50%';
+        $('implicitNote').style.display = 'none';
+        return;
+      }
+
+      const diff = Math.abs(aBRL - bBRL);
+      const diffKK = diff / kkRate;
+
+      if (aBRL < bBRL) {
+        sideA.classList.add('winner');
+        sideB.classList.add('loser');
+        vt.textContent = '✓ Usar Moedas do Jogo vale mais a pena!';
+        $('vEco').textContent = fmtBRL(diff);
+        $('vEcoKK').textContent = fmtKK(diffKK);
+        const advantage = ((1 - aBRL / bBRL) * 100);
+        $('vPct').textContent = fmtPct(advantage) + ' mais barato';
+
+        const implBiRate = bBRL / (aKK / 1000);
+        const diffRatePct = Math.abs((implBiRate / biRate - 1) * 100);
+        $('implicitNote').style.display = '';
+        $('implicitNote').innerHTML = `Comprar direto em <strong>R$</strong> equivale a pagar <strong>${fmtBRL(implBiRate)}</strong> no bi — a cotação implícita é <strong>${diffRatePct.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 })}% mais cara</strong> que a cotação atual de ${fmtBRL(biRate)}/bi.`;
+      } else if (bBRL < aBRL) {
+        sideB.classList.add('winner');
+        sideA.classList.add('loser');
+        vc.classList.add('red-verdict');
+        vt.textContent = '✓ Comprar por Dinheiro Real vale mais a pena!';
+        $('vEco').textContent = fmtBRL(diff);
+        $('vEcoKK').textContent = fmtKK(diffKK);
+        const advantage = ((1 - bBRL / aBRL) * 100);
+        $('vPct').textContent = fmtPct(advantage) + ' mais barato';
+
+        const implBiRate = bBRL / (aKK / 1000);
+        const diffRatePct = Math.abs((1 - implBiRate / biRate) * 100);
+        $('implicitNote').style.display = '';
+        $('implicitNote').innerHTML = `Comprar direto em <strong>R$</strong> equivale a pagar <strong>${fmtBRL(implBiRate)}</strong> no bi — <strong>${diffRatePct.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 })}% mais barato</strong> que a cotação atual de ${fmtBRL(biRate)}/bi.`;
+      } else {
+        sideA.classList.remove('winner', 'loser');
+        sideB.classList.remove('winner', 'loser');
+        vc.classList.add('neutral');
+        vt.textContent = '⚖ Ambas as opções custam igual';
+        $('vEco').textContent = 'R$ 0,00';
+        $('vEcoKK').textContent = '0 kk';
+        $('vPct').textContent = '0,00%';
+        $('implicitNote').style.display = 'none';
+      }
+
+      const total = aBRL + bBRL;
+      const pA = Math.max(4, Math.min(96, (aBRL / total) * 100));
+      $('barFillA').style.width = pA + '%';
+      $('barLabelA').textContent = fmtBRL(aBRL);
+      $('barLabelB').textContent = fmtBRL(bBRL);
+    }
+
+    /* ─── Toggle kk / bi do Comparador ─────────────────────── */
+    function setCmpUnit(newUnit, shouldConvert = true) {
+      const hidden = $('cmpAUnit');
+      const oldUnit = hidden ? hidden.value : 'kk';
+      if (hidden) hidden.value = newUnit;
+
+      const optKK = $('cmpOptKK');
+      const optBI = $('cmpOptBI');
+      if (optKK) optKK.classList.toggle('active', newUnit === 'kk');
+      if (optBI) optBI.classList.toggle('active', newUnit === 'bi');
+
+      const input = $('cmpA');
+      if (input) {
+        input.placeholder = newUnit === 'kk' ? 'Ex: 10.000' : 'Ex: 10';
+        const val = parseBR(input.value);
+        if (isFinite(val) && val > 0) {
+          if (shouldConvert && oldUnit !== newUnit) {
+            if (newUnit === 'bi') {
+              // Converte kk para bi
+              input.value = fmtNumBR(val / 1000, 4);
+            } else {
+              // Converte bi para kk
+              input.value = fmtNumBR(val * 1000, 3);
+            }
+          } else {
+            input.value = newUnit === 'bi' ? fmtNumBR(val, 4) : fmtNumBR(val, 3);
+          }
+        }
+      }
+
+      calcCompare();
+    }
+
+    const cmpToggle = $('cmpToggle');
+    if (cmpToggle) {
+      cmpToggle.addEventListener('click', e => {
+        const targetOpt = e.target.closest('.unit-opt');
+        const current = $('cmpAUnit').value;
+        let next = current === 'kk' ? 'bi' : 'kk';
+        if (targetOpt && targetOpt.dataset.val) {
+          next = targetOpt.dataset.val;
+        }
+        setCmpUnit(next, true);
+      });
+    }
+
+    // Seleção inteligente e formatação no campo cmpA
+    let cmpAWasAllSelected = false;
+    $('cmpA').addEventListener('mousedown', function () {
+      cmpAWasAllSelected = (this.selectionStart === 0 && this.selectionEnd === this.value.length && this.value.length > 0);
+    });
+    $('cmpA').addEventListener('click', function () {
+      if (cmpAWasAllSelected) {
+        cmpAWasAllSelected = false;
+      } else {
+        this.select();
+      }
+    });
+    $('cmpA').addEventListener('blur', () => {
+      const v = parseBR($('cmpA').value);
+      const unit = $('cmpAUnit').value;
+      if (isFinite(v) && v > 0) {
+        $('cmpA').value = unit === 'bi' ? fmtNumBR(v, 4) : fmtNumBR(v, 3);
+      }
+      cmpAWasAllSelected = false;
+    });
+    $('cmpA').addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const v = parseBR($('cmpA').value);
+        const unit = $('cmpAUnit').value;
+        if (isFinite(v) && v > 0) {
+          $('cmpA').value = unit === 'bi' ? fmtNumBR(v, 4) : fmtNumBR(v, 3);
+        }
+        calcCompare();
+      }
+    });
+    $('cmpA').addEventListener('input', calcCompare);
+    $('cmpB').addEventListener('input', calcCompare);
+
+    // Formatação padrão BR no blur/Enter do campo de Reais da Opção B
+    let cmpBWasAllSelected = false;
+    $('cmpB').addEventListener('mousedown', function () {
+      cmpBWasAllSelected = (this.selectionStart === 0 && this.selectionEnd === this.value.length && this.value.length > 0);
+    });
+    $('cmpB').addEventListener('click', function () {
+      if (cmpBWasAllSelected) {
+        cmpBWasAllSelected = false;
+      } else {
+        this.select();
+      }
+    });
+    $('cmpB').addEventListener('blur', () => {
+      const v = parseBR($('cmpB').value);
+      if (isFinite(v) && v > 0) {
+        $('cmpB').value = fmtBRLraw(v, 2);
+      }
+      cmpBWasAllSelected = false;
+    });
+    $('cmpB').addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const v = parseBR($('cmpB').value);
+        if (isFinite(v) && v > 0) $('cmpB').value = fmtBRLraw(v, 2);
+        calcCompare();
+      }
+    });
+
+    /* ═══════════════════════════════════════════════════════════
+       MÓDULO 3 — CONVERSOR RÁPIDO BIDIRECIONAL
+    ══════════════════════════════════════════════════════════ */
+    function calcConv(source) {
+      if (convLock) return;
+      convLock = true;
+      const kkRate = biRate / 1000;
+
+      if (source === 'brl') {
+        const v = parseBR($('convBRL').value);
+        if (isFinite(v) && v >= 0) {
+          const kk = v / kkRate;
+          $('convKK').value = kk === 0 ? '' : fmtNumBR(kk, 4);
+          $('convBI').value = kk === 0 ? '' : fmtNumBR(kk / 1000, 6);
+        } else { $('convKK').value = ''; $('convBI').value = ''; }
+      } else if (source === 'kk') {
+        const v = parseBR($('convKK').value);
+        if (isFinite(v) && v >= 0) {
+          $('convBRL').value = v === 0 ? '' : fmtBRLraw(v * kkRate, 2);
+          $('convBI').value = v === 0 ? '' : fmtNumBR(v / 1000, 6);
+        } else { $('convBRL').value = ''; $('convBI').value = ''; }
+      } else if (source === 'bi') {
+        const v = parseBR($('convBI').value);
+        if (isFinite(v) && v >= 0) {
+          const kk = v * 1000;
+          $('convBRL').value = v === 0 ? '' : fmtBRLraw(kk * kkRate, 2);
+          $('convKK').value = v === 0 ? '' : fmtNumBR(kk, 4);
+        } else { $('convBRL').value = ''; $('convKK').value = ''; }
+      }
+
+      convLock = false;
+    }
+
+    $('convBRL').addEventListener('input', () => calcConv('brl'));
+    $('convKK').addEventListener('input', () => calcConv('kk'));
+    $('convBI').addEventListener('input', () => calcConv('bi'));
+
+    // Formatação padrão BR no blur/Enter do campo de Reais do Conversor
+    let convBRLWasAllSelected = false;
+    $('convBRL').addEventListener('mousedown', function () {
+      convBRLWasAllSelected = (this.selectionStart === 0 && this.selectionEnd === this.value.length && this.value.length > 0);
+    });
+    $('convBRL').addEventListener('click', function () {
+      if (convBRLWasAllSelected) {
+        convBRLWasAllSelected = false;
+      } else {
+        this.select();
+      }
+    });
+    $('convBRL').addEventListener('blur', () => {
+      const v = parseBR($('convBRL').value);
+      if (isFinite(v) && v > 0) {
+        $('convBRL').value = fmtBRLraw(v, 2);
+      }
+      convBRLWasAllSelected = false;
+    });
+    $('convBRL').addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const v = parseBR($('convBRL').value);
+        if (isFinite(v) && v > 0) $('convBRL').value = fmtBRLraw(v, 2);
+        calcConv('brl');
+      }
+    });
+
+    /* ═══════════════════════════════════════════════════════════
+       TABELA DE REFERÊNCIA RÁPIDA
+    ══════════════════════════════════════════════════════════ */
+    const REF_VALUES = [
+      { label: '1 kk', kk: 1 },
+      { label: '10 kk', kk: 10 },
+      { label: '50 kk', kk: 50 },
+      { label: '100 kk', kk: 100 },
+      { label: '250 kk', kk: 250 },
+      { label: '500 kk', kk: 500 },
+      { label: '1 bi', kk: 1000, sep: true },
+      { label: '2 bi', kk: 2000 },
+      { label: '5 bi', kk: 5000 },
+      { label: '10 bi', kk: 10000 },
+      { label: '20 bi', kk: 20000 },
+      { label: '50 bi', kk: 50000 },
+      { label: '100 bi', kk: 100000 },
+    ];
+
+    function renderTable() {
+      const kkRate = biRate / 1000;
+      const tbody = $('refBody');
+      tbody.innerHTML = '';
+      REF_VALUES.forEach(row => {
+        const tr = document.createElement('tr');
+        if (row.sep) tr.classList.add('sep');
+        const brl = row.kk * kkRate;
+        tr.innerHTML = `
+      <td>${row.label}</td>
+      <td>${row.kk.toLocaleString('pt-BR')} kk</td>
+      <td>${(row.kk / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} bi</td>
+      <td class="${row.kk >= 1000 ? 'hl' : ''}">${fmtBRL(brl)}</td>
+    `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       TOAST
+    ══════════════════════════════════════════════════════════ */
+    let toastTimer;
+    function showToast(msg) {
+      $('toastMsg').textContent = msg;
+      const t = $('toast');
+      t.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       INIT
+    ══════════════════════════════════════════════════════════ */
+    initRate();
+    calcItem();
+    calcCompare();
+    renderTable();
+  </script>
+</body>
+
+</html>
