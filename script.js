@@ -1,810 +1,636 @@
 /* ═══════════════════════════════════════════════════════════
-   STATE
+   CONFIGURAÇÃO
 ══════════════════════════════════════════════════════════ */
-let biRate = 0;    // R$ por 1 bi (inicia vazio com marca d'água 0,00)
-let convLock = false;
+const KK_PER_BI = 1000;          // 1 bi = 1.000 kk  →  até 999 kk fica em kk, a partir de 1.000 kk vira bi
+const LEMBRAR_COTACAO = false;   // true: reabre a página já com a última cotação digitada
+const STORAGE_KEY = 'pw_bi_rate';
+const AUTO_BI_DELAY = 700;       // ms de pausa na digitação até trocar kk → bi automaticamente
+const QTY_MAX = 99999;
 
 /* ═══════════════════════════════════════════════════════════
-   UTILS & FORMATAÇÃO BRASILEIRA (pt-BR)
+   ESTADO
+══════════════════════════════════════════════════════════ */
+let biRate = 0;                  // R$ por 1 bi (0 = ainda não definida)
+
+const hasRate = () => biRate > 0;
+const kkRate = () => biRate / KK_PER_BI;
+
+/* ═══════════════════════════════════════════════════════════
+   UTILIDADES
 ══════════════════════════════════════════════════════════ */
 const $ = id => document.getElementById(id);
+const setText = (id, txt) => { $(id).textContent = txt; };
+const NBSP = '\u00a0';
 
-// Converte strings no formato brasileiro ou numérico para float seguro
-function parseBR(str) {
-  if (!str && str !== 0) return NaN;
-  str = String(str).trim().replace(/[^\d.,]/g, '');
-  if (!str) return NaN;
+// toLocaleString pt-BR com mínimo/máximo de casas decimais
+const nf = (n, min = 0, max = min) =>
+  n.toLocaleString('pt-BR', { minimumFractionDigits: min, maximumFractionDigits: max });
 
-  if (str.includes('.') && str.includes(',')) {
-    if (str.lastIndexOf(',') > str.lastIndexOf('.')) {
-      // 1.250,50 -> 1250.50
-      str = str.replace(/\./g, '').replace(',', '.');
+// localStorage com proteção (modo privado / file:// podem bloquear)
+const store = {
+  get(key) { try { return localStorage.getItem(key); } catch (_) { return null; } },
+  set(key, val) { try { localStorage.setItem(key, val); } catch (_) { /* ignora */ } },
+};
+
+/* ═══════════════════════════════════════════════════════════
+   LEITURA DE NÚMEROS (padrão pt-BR: ponto = milhar, vírgula = decimal)
+══════════════════════════════════════════════════════════ */
+function parseBR(raw) {
+  if (raw === null || raw === undefined) return NaN;
+  let s = String(raw).trim().replace(/[^\d.,]/g, '');
+  if (!s) return NaN;
+
+  const hasDot = s.includes('.');
+  const hasComma = s.includes(',');
+
+  if (hasDot && hasComma) {
+    // O último separador é o decimal
+    if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
+      s = s.replace(/\./g, '').replace(',', '.');   // 1.250,50 → 1250.50
     } else {
-      // 1,250.50 -> 1250.50
-      str = str.replace(/,/g, '');
+      s = s.replace(/,/g, '');                      // 1,250.50 → 1250.50
     }
-  } else if (str.includes(',')) {
-    const commaCount = (str.match(/,/g) || []).length;
-    if (commaCount > 1) {
-      str = str.replace(/,/g, '');
-    } else {
-      str = str.replace(',', '.');
+  } else if (hasComma) {
+    const commas = (s.match(/,/g) || []).length;
+    s = commas > 1 ? s.replace(/,/g, '') : s.replace(',', '.');
+  } else if (hasDot) {
+    const parts = s.split('.');
+    if (parts.length > 2) {
+      s = parts.join('');                           // 1.000.000 → 1000000
+    } else if (parts[1].length === 3 && parts[0].length >= 1 && parts[0].length <= 3 && parts[0] !== '0') {
+      s = parts.join('');                           // 1.540 → 1540 (milhar)
     }
-  } else if (str.includes('.')) {
-    const dotCount = (str.match(/\./g) || []).length;
-    if (dotCount > 1) {
-      // 1.000.000 -> 1000000
-      str = str.replace(/\./g, '');
-    } else {
-      const parts = str.split('.');
-      if (parts[1].length === 3 && parts[0].length >= 1 && parts[0].length <= 3 && parts[0] !== '0') {
-        // 1.000 ou 50.000 -> 1000 ou 50000
-        str = parts[0] + parts[1];
-      } else {
-        // 28.5 ou 28.00 ou 0.028
-        str = parts[0] + '.' + parts[1];
-      }
-    }
+    // caso contrário o ponto é decimal: 1.5 / 0.540
   }
-  return parseFloat(str);
+  return parseFloat(s);
 }
 
-// Formata valores em Reais no padrão brasileiro (ex: R$ 1.250,00, R$ 28,00 ou R$ 0,028 para frações)
+/* ═══════════════════════════════════════════════════════════
+   FORMATAÇÃO
+══════════════════════════════════════════════════════════ */
+
+// R$ 1.250,00 · valores pequenos (< R$ 0,10) mostram 3 casas
 function fmtBRL(n, decimals) {
   if (!isFinite(n)) return '—';
-  if (decimals === undefined) {
-    decimals = (n > 0 && n < 0.10) ? 3 : 2;
-  }
-  return 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  if (decimals === undefined) decimals = (n > 0 && n < 0.10) ? 3 : 2;
+  return 'R$' + NBSP + nf(n, decimals);
 }
 
-// Formata número cru em Reais no padrão brasileiro (ex: 1.250,00 ou 28,00)
-function fmtBRLraw(n, decimals = 2) {
-  if (!isFinite(n)) return '';
-  return n.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+// 500 kk · 12,5 kk
+function fmtKK(kk) {
+  if (!isFinite(kk)) return '—';
+  return nf(kk, 0, 3) + NBSP + 'kk';
 }
 
-// Formata valores em KK com separador de milhar (ex: 1.000 kk, 10.000 kk)
-function fmtKK(n, maxDecimals = 3) {
-  if (!isFinite(n)) return '—';
-  return n.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: maxDecimals }) + '\u00a0kk';
+// Parte numérica de um valor em bi.
+// 1,540 preserva o zero (1 bi + 540 kk) · 1,5 · 1 · 1,255
+function biNumber(bi) {
+  const kk = bi * KK_PER_BI;
+  const kkInt = Math.round(kk);
+  const isWhole = Math.abs(kk - kkInt) < 1e-6;
+  if (isWhole && kkInt % 10 === 0 && kkInt % 100 !== 0) return nf(bi, 3);
+  return nf(bi, 0, 4);
 }
 
-// Formata valores em BI com separador e decimais corretos (ex: 1 bi, 2,5 bi, 10 bi)
-function fmtBI(n, maxDecimals = 4) {
-  if (!isFinite(n)) return '—';
-  return n.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: maxDecimals }) + '\u00a0bi';
+function fmtBI(bi) {
+  if (!isFinite(bi)) return '—';
+  return biNumber(bi) + NBSP + 'bi';
 }
 
-// Formata números gerais com padrão brasileiro de pontos e vírgulas
-function fmtNumBR(n, maxDecimals = 4) {
-  if (!isFinite(n)) return '—';
-  return n.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: maxDecimals });
+// REGRA GERAL: até 999 kk → kk · a partir de 1.000 kk → bi
+function fmtCoins(kk) {
+  if (!isFinite(kk)) return '—';
+  return kk >= KK_PER_BI ? fmtBI(kk / KK_PER_BI) : fmtKK(kk);
 }
 
-// Formata porcentagens com vírgula (ex: 12,50%)
+// Texto que vai dentro do campo de entrada, de acordo com a unidade
+function coinFieldText(kk, unit) {
+  return unit === 'bi' ? biNumber(kk / KK_PER_BI) : nf(kk, 0, 3);
+}
+
 function fmtPct(n) {
   if (!isFinite(n)) return '—';
-  return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+  return nf(n, 2) + '%';
 }
 
 /* ═══════════════════════════════════════════════════════════
-   COTAÇÃO
+   HELPERS DE INTERFACE
 ══════════════════════════════════════════════════════════ */
-function initRate() {
-  const inp = $('biRate');
-  inp.value = '';
-  biRate = 0;
-  updatePills();
+
+// 1º clique seleciona tudo · clique seguinte posiciona o cursor para editar
+function smartSelect(input) {
+  let wasAllSelected = false;
+  input.addEventListener('mousedown', () => {
+    wasAllSelected = input.value.length > 0 &&
+      input.selectionStart === 0 && input.selectionEnd === input.value.length;
+  });
+  input.addEventListener('click', () => {
+    if (wasAllSelected) wasAllSelected = false;
+    else input.select();
+  });
+  input.addEventListener('blur', () => { wasAllSelected = false; });
 }
 
-function updatePills() {
-  if (!biRate || biRate <= 0) {
-    $('pill-kk').textContent = '—';
-    $('pill-rl').textContent = '—';
-    return;
-  }
-  const kkRate = biRate / 1000;
-  const rlKK = 1 / kkRate;
-  $('pill-kk').textContent = 'R$\u00a0' + kkRate.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 6 });
-  $('pill-rl').textContent = rlKK.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + '\u00a0kk';
-}
-
-$('biRate').addEventListener('input', () => {
-  const valStr = $('biRate').value.trim();
-  if (!valStr) {
-    biRate = 0;
-    updatePills();
-    calcItem();
-    calcCompare();
-    calcConv('none');
-    renderTable();
-    return;
-  }
-  const v = parseBR(valStr);
-  if (v > 0) {
-    biRate = v;
-    localStorage.setItem('pw_bi_rate', v);
-    updatePills();
-    calcItem();
-    calcCompare();
-    calcConv('none');
-    renderTable();
-  }
-});
-
-// Formata o campo ao pressionar Enter e dispara cálculo
-function applyBiRate() {
-  const valStr = $('biRate').value.trim();
-  if (!valStr) {
-    biRate = 0;
-    $('biRate').value = '';
-    updatePills();
-    calcItem();
-    calcCompare();
-    calcConv('none');
-    renderTable();
-    return;
-  }
-  const v = parseBR(valStr);
-  if (v > 0) {
-    biRate = v;
-    localStorage.setItem('pw_bi_rate', v);
-    $('biRate').value = fmtBRLraw(v, 2);  // Formata: 28 → 28,00
-    updatePills();
-    calcItem();
-    calcCompare();
-    calcConv('none');
-    renderTable();
-    flashBiBtn();
-  }
-}
-
-function flashBiBtn() {
-  const btn = $('biCalcBtn');
+// Feedback rápido no botão (ex.: "✓ Calculado!")
+function flashButton(btn, okText) {
   if (!btn) return;
-  btn.classList.add('btn-green');
-  btn.classList.remove('btn-gold');
-  btn.innerHTML = '✓ Atualizado!';
-  setTimeout(() => {
-    btn.classList.remove('btn-green');
-    btn.classList.add('btn-gold');
-    btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 0 1-8 8M4 12a8 8 0 0 1 8-8M20 4l-2 2 2 2M4 8l2-2-2-2"/></svg> Atualizar`;
+  const label = btn.querySelector('.btn-label');
+  if (!label) return;
+  if (!btn.dataset.label) btn.dataset.label = label.textContent;
+  clearTimeout(btn._flashTimer);
+  btn.classList.replace('btn-gold', 'btn-green');
+  label.textContent = okText;
+  btn._flashTimer = setTimeout(() => {
+    btn.classList.replace('btn-green', 'btn-gold');
+    label.textContent = btn.dataset.label;
   }, 1200);
 }
 
-$('biRate').addEventListener('keydown', e => {
-  if (e.key === 'Enter') { e.preventDefault(); applyBiRate(); }
-});
-
-$('biRate').addEventListener('blur', () => {
-  const valStr = $('biRate').value.trim();
-  if (valStr) {
-    const v = parseBR(valStr);
-    if (v > 0) $('biRate').value = fmtBRLraw(v, 2);
-  } else {
-    $('biRate').value = '';
-  }
-  biRateWasAllSelected = false;
-});
-
-// 1º clique seleciona tudo | clique a mais tira seleção para editar número por número
-let biRateWasAllSelected = false;
-
-$('biRate').addEventListener('mousedown', function () {
-  biRateWasAllSelected = (this.selectionStart === 0 && this.selectionEnd === this.value.length && this.value.length > 0);
-});
-
-$('biRate').addEventListener('click', function () {
-  if (biRateWasAllSelected) {
-    biRateWasAllSelected = false;
-  } else {
-    this.select();
-  }
-});
-
-$('biCalcBtn').addEventListener('click', applyBiRate);
-
-/* ═══════════════════════════════════════════════════════════
-   MÓDULO 1 — CALCULADORA DE ITEM E LOTE
-══════════════════════════════════════════════════════════ */
-function getItemKK() {
-  const price = parseBR($('itemPrice').value);
-  const unit = $('itemUnit').value;
-  const qty = parseInt($('itemQty').value) || 1;
-  if (!isFinite(price) || price <= 0) return { valid: false };
-  const unitKK = unit === 'bi' ? price * 1000 : price;
-  const totalKK = unitKK * qty;
-  return { valid: true, unitKK, totalKK, qty, unitPriceRaw: price };
-}
-
-// Formata o input de preço de acordo com a unidade selecionada (KK vs BI)
-function formatItemPriceInput() {
-  const p = parseBR($('itemPrice').value);
-  if (!isFinite(p) || p <= 0) return;
-  const unit = $('itemUnit').value;
-  if (unit === 'kk') {
-    $('itemPrice').value = p.toLocaleString('pt-BR', { maximumFractionDigits: 3 });
-  } else {
-    $('itemPrice').value = p.toLocaleString('pt-BR', { maximumFractionDigits: 4 });
-  }
-}
-
-// Seleção de clique inteligente no input de preço
-let itemPriceWasAllSelected = false;
-$('itemPrice').addEventListener('mousedown', function () {
-  itemPriceWasAllSelected = (this.selectionStart === 0 && this.selectionEnd === this.value.length && this.value.length > 0);
-});
-$('itemPrice').addEventListener('click', function () {
-  if (itemPriceWasAllSelected) {
-    itemPriceWasAllSelected = false;
-  } else {
-    this.select();
-  }
-});
-$('itemPrice').addEventListener('blur', () => {
-  formatItemPriceInput();
-  itemPriceWasAllSelected = false;
-});
-
-function calcItem() {
-  const d = getItemKK();
-  const unit = $('itemUnit').value;
-
-  if (!d.valid) {
-    ['unitBRL', 'unitBRLexact', 'totalKK', 'totalBI', 'totalBRL'].forEach(id => { $(id).textContent = '—'; });
-    $('subKK').textContent = '—';
-    $('subBI').textContent = '—';
-    $('totalBRLsub').textContent = '—';
-    $('simBiCount').textContent = $('simBiCost').textContent = $('simBiChange').textContent = '—';
-    $('simNote').textContent = (!biRate || biRate <= 0) ? 'Defina o valor da cotação no topo para ver os cálculos.' : 'Configure o preço do item acima para ver a simulação.';
-    return;
-  }
-
-  const { unitKK, totalKK, qty } = d;
-  const hasRate = (biRate && biRate > 0);
-  const kkRate = hasRate ? biRate / 1000 : 0;
-  const unitBRL = unitKK * kkRate;
-  const totalBRL = totalKK * kkRate;
-  const totalBI = totalKK / 1000;
-
-  // Custo Unitário em R$
-  $('unitBRL').textContent = hasRate ? fmtBRL(unitBRL) : '—';
-  $('unitBRLexact').textContent = hasRate ? `exato: ${fmtBRL(unitBRL, 4)} · 1 ${unit}` : 'aguardando cotação';
-
-  // Separação e formatação visual dos valores conforme KK ou BI
-  const cardKK = $('cardKK');
-  const cardBI = $('cardBI');
-  const labelKK = $('labelKK');
-  const labelBI = $('labelBI');
-  const subKK = $('subKK');
-  const subBI = $('subBI');
-
-  if (unit === 'kk') {
-    // Quando estiver selecionado KK: destaque em KK
-    cardKK.classList.add('accent-gold');
-    cardBI.classList.remove('accent-gold');
-    cardKK.style.order = '1';
-    cardBI.style.order = '2';
-
-    labelKK.textContent = 'Total do Lote (kk)';
-    $('totalKK').textContent = fmtKK(totalKK);
-    subKK.textContent = `(= ${fmtBI(totalBI)})`;
-
-    labelBI.textContent = 'Equivalente em bi';
-    $('totalBI').textContent = fmtBI(totalBI);
-    subBI.textContent = 'conversão automática';
-
-    const changeKK = (Math.ceil(totalBI) - totalBI) * 1000;
-    $('simBiChange').textContent = fmtKK(changeKK);
-  } else {
-    // Quando estiver selecionado BI: destaque em BI
-    cardBI.classList.add('accent-gold');
-    cardKK.classList.remove('accent-gold');
-    cardBI.style.order = '1';
-    cardKK.style.order = '2';
-
-    labelBI.textContent = 'Total do Lote (bi)';
-    $('totalBI').textContent = fmtBI(totalBI);
-    subBI.textContent = `(= ${fmtKK(totalKK)})`;
-
-    labelKK.textContent = 'Equivalente em kk';
-    $('totalKK').textContent = fmtKK(totalKK);
-    subKK.textContent = 'conversão automática';
-
-    const changeKK = (Math.ceil(totalBI) - totalBI) * 1000;
-    $('simBiChange').textContent = fmtBI(changeKK / 1000);
-  }
-
-  // Total Exato em R$
-  $('totalBRL').textContent = hasRate ? fmtBRL(totalBRL) : '—';
-  $('totalBRLsub').textContent = hasRate ? `${qty.toLocaleString('pt-BR')} un. × ${fmtBRL(unitBRL)}` : 'aguardando cotação';
-
-  // Simulador BI com separadores pt-BR
-  const biNeeded = Math.ceil(totalBI);
-  const biCost = biNeeded * biRate;
-  const changeKK = (biNeeded - totalBI) * 1000;
-
-  $('simBiCount').textContent = biNeeded.toLocaleString('pt-BR');
-  $('simBiCost').textContent = hasRate ? fmtBRL(biCost) : '—';
-
-  if (!hasRate) {
-    $('simNote').textContent = 'Defina a cotação do bi no topo para calcular o pacote fechado.';
-  } else if (changeKK === 0) {
-    $('simNote').innerHTML = `Comprando <strong>${biNeeded.toLocaleString('pt-BR')} bi fechado${biNeeded > 1 ? 's' : ''}</strong> por <strong>${fmtBRL(biCost)}</strong>, você paga o item exato sem sobrar troco.`;
-  } else if (unit === 'kk') {
-    $('simNote').innerHTML = `Comprando <strong>${biNeeded.toLocaleString('pt-BR')} bi fechado${biNeeded > 1 ? 's' : ''}</strong> por <strong>${fmtBRL(biCost)}</strong>, você paga o item e fica com <strong>${fmtKK(changeKK)}</strong> de troco na bag.`;
-  } else {
-    $('simNote').innerHTML = `Comprando <strong>${biNeeded.toLocaleString('pt-BR')} bi fechado${biNeeded > 1 ? 's' : ''}</strong> por <strong>${fmtBRL(biCost)}</strong>, você paga o item e fica com <strong>${fmtBI(changeKK / 1000)}</strong> (${fmtKK(changeKK)}) de troco na bag.`;
-  }
-
-  // Sync comparador passivo (só quando o campo cmpA estiver vazio)
-  if (!$('cmpA').value.trim()) {
-    const price = parseBR($('itemPrice').value);
-    setCmpUnit(unit, false);
-    $('cmpA').value = unit === 'bi'
-      ? fmtNumBR(price, 4)
-      : fmtNumBR(totalKK, 3);
-    calcCompare();
-  }
-}
-
-$('itemQty').addEventListener('input', calcItem);
-
-/* ─── Toggle kk / bi ──────────────────────────────────── */
-(function initUnitToggle() {
-  const toggle = $('unitToggle');
-  if (!toggle) return;
-  const opts = toggle.querySelectorAll('.unit-opt');
-  const hidden = $('itemUnit');
-  const priceInput = $('itemPrice');
-
-  toggle.addEventListener('click', () => {
-    const current = hidden.value;
-    const next = current === 'kk' ? 'bi' : 'kk';
-    hidden.value = next;
-    opts.forEach(o => {
-      o.classList.toggle('active', o.dataset.val === next);
-    });
-
-    priceInput.placeholder = '0';
-    formatItemPriceInput();
-    calcItem();
-  });
-})();
-
-// Calcular ao pressionar Enter no campo de preço
-$('itemPrice').addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    formatItemPriceInput();
-    calcItem();
-    syncComparadorForced();
-    flashCalcBtn();
-  }
-});
-
-// Botão Calcular (Módulo 1)
-$('calcBtn').addEventListener('click', () => {
-  formatItemPriceInput();
-  calcItem();
-  syncComparadorForced();
-  flashCalcBtn();
-});
-
-// Força sync do comparador
-function syncComparadorForced() {
-  const d = getItemKK();
-  if (!d.valid) return;
-  const unit = $('itemUnit').value;
-  const price = parseBR($('itemPrice').value);
-  setCmpUnit(unit, false);
-  $('cmpA').value = unit === 'bi'
-    ? fmtNumBR(price, 4)
-    : fmtNumBR(d.totalKK, 3);
-  calcCompare();
-}
-
-function flashCalcBtn() {
-  const btn = $('calcBtn');
-  btn.classList.add('btn-green');
-  btn.classList.remove('btn-gold');
-  btn.textContent = '✓ Calculado!';
-  setTimeout(() => {
-    btn.classList.remove('btn-green');
-    btn.classList.add('btn-gold');
-    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg> Calcular`;
-  }, 1200);
-}
-
-$('qtyMinus').addEventListener('click', () => {
-  const v = parseInt($('itemQty').value) || 1;
-  if (v > 1) { $('itemQty').value = v - 1; calcItem(); }
-});
-$('qtyPlus').addEventListener('click', () => {
-  $('itemQty').value = (parseInt($('itemQty').value) || 1) + 1;
-  calcItem();
-});
-
-// Resetar campos da Calculadora de Item e Lote (Preço e Quantidade)
-function resetItemCalc() {
-  const priceInp = $('itemPrice');
-  const qtyInp = $('itemQty');
-  const resetBtn = $('resetItemBtn');
-
-  priceInp.value = '';
-  qtyInp.value = '1';
-
-  // Reseta unidade para kk
-  const hidden = $('itemUnit');
-  if (hidden && hidden.value !== 'kk') {
-    hidden.value = 'kk';
-    const toggle = $('unitToggle');
-    if (toggle) {
-      const opts = toggle.querySelectorAll('.unit-opt');
-      opts.forEach(o => o.classList.toggle('active', o.dataset.val === 'kk'));
-    }
-  }
-
-  itemPriceWasAllSelected = false;
-
-  // Animação de giro nas setas circulares
-  if (resetBtn) {
-    resetBtn.classList.add('spin');
-    setTimeout(() => resetBtn.classList.remove('spin'), 450);
-  }
-
-  calcItem();
-  showToast('Campos resetados!');
-}
-
-const resetBtn = $('resetItemBtn');
-if (resetBtn) {
-  resetBtn.addEventListener('click', resetItemCalc);
-}
-
-/* ─── Copiar ─────────────────────────────────────────── */
-function copyVal(id) {
-  const el = $(id);
-  const txt = el.textContent.replace(/^R\$[\s\u00a0]*/, '').trim();
-  navigator.clipboard.writeText(txt).then(() => showToast('Valor copiado: ' + txt));
-}
-window.copyVal = copyVal;
-
-/* ═══════════════════════════════════════════════════════════
-   MÓDULO 2 — COMPARADOR INTELIGENTE
-══════════════════════════════════════════════════════════ */
-function calcCompare() {
-  const aRaw = parseBR($('cmpA').value);
-  const aUnit = $('cmpAUnit').value;
-  const bRaw = parseBR($('cmpB').value);
-
-  const hasRate = (biRate && biRate > 0);
-  const kkRate = hasRate ? biRate / 1000 : 0;
-  const aKK = isFinite(aRaw) && aRaw > 0
-    ? (aUnit === 'bi' ? aRaw * 1000 : aRaw)
-    : NaN;
-  const aBRL = hasRate ? aKK * kkRate : NaN;
-  const bBRL = isFinite(bRaw) && bRaw > 0 ? bRaw : NaN;
-
-  $('cmpAPrice').textContent = isFinite(aBRL) ? fmtBRL(aBRL) : '—';
-  $('cmpBPrice').textContent = isFinite(bBRL) ? fmtBRL(bBRL) : '—';
-
-  // Nota explicativa dinâmica da Opção A
-  if (!hasRate && isFinite(aRaw) && aRaw > 0) {
-    $('cmpANote').textContent = aUnit === 'kk'
-      ? `equivale a ${fmtBI(aRaw / 1000)} · defina a cotação no topo`
-      : `equivale a ${fmtKK(aRaw * 1000)} · defina a cotação no topo`;
-  } else if (isFinite(aRaw) && aRaw > 0) {
-    $('cmpANote').textContent = aUnit === 'kk'
-      ? `custo em Reais · equivale a ${fmtBI(aRaw / 1000)}`
-      : `custo em Reais · equivale a ${fmtKK(aRaw * 1000)}`;
-  } else {
-    $('cmpANote').textContent = hasRate ? 'custo em Reais (cotação atual)' : 'defina a cotação no topo';
-  }
-
-  const sideA = $('sideA'), sideB = $('sideB');
-  const vc = $('verdictCard');
-  const vt = $('verdictTitle');
-
-  sideA.classList.remove('winner', 'loser');
-  sideB.classList.remove('winner', 'loser');
-  vc.classList.remove('neutral', 'red-verdict');
-
-  if (!hasRate) {
-    vc.classList.add('neutral');
-    vt.textContent = '⟳ Defina o valor da cotação no topo da página';
-    ['vEco', 'vEcoKK', 'vPct'].forEach(i => { $(i).textContent = '—'; });
-    $('barFillA').style.width = '50%';
-    $('implicitNote').style.display = 'none';
-    return;
-  }
-
-  if (!isFinite(aBRL) || !isFinite(bBRL)) {
-    vc.classList.add('neutral');
-    vt.textContent = '⟳ Preencha os dois campos para ver o veredito';
-    ['vEco', 'vEcoKK', 'vPct'].forEach(i => { $(i).textContent = '—'; });
-    $('barFillA').style.width = '50%';
-    $('implicitNote').style.display = 'none';
-    return;
-  }
-
-  const diff = Math.abs(aBRL - bBRL);
-  const diffKK = diff / kkRate;
-
-  if (aBRL < bBRL) {
-    sideA.classList.add('winner');
-    sideB.classList.add('loser');
-    vt.textContent = '✓ Usar Moedas do Jogo vale mais a pena!';
-    $('vEco').textContent = fmtBRL(diff);
-    $('vEcoKK').textContent = fmtKK(diffKK);
-    const advantage = ((1 - aBRL / bBRL) * 100);
-    $('vPct').textContent = fmtPct(advantage) + ' mais barato';
-
-    const implBiRate = bBRL / (aKK / 1000);
-    const diffRatePct = Math.abs((implBiRate / biRate - 1) * 100);
-    $('implicitNote').style.display = '';
-    $('implicitNote').innerHTML = `Comprar direto em <strong>R$</strong> equivale a pagar <strong>${fmtBRL(implBiRate)}</strong> no bi — a cotação implícita é <strong>${diffRatePct.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 })}% mais cara</strong> que a cotação atual de ${fmtBRL(biRate)}/bi.`;
-  } else if (bBRL < aBRL) {
-    sideB.classList.add('winner');
-    sideA.classList.add('loser');
-    vc.classList.add('red-verdict');
-    vt.textContent = '✓ Comprar por Dinheiro Real vale mais a pena!';
-    $('vEco').textContent = fmtBRL(diff);
-    $('vEcoKK').textContent = fmtKK(diffKK);
-    const advantage = ((1 - bBRL / aBRL) * 100);
-    $('vPct').textContent = fmtPct(advantage) + ' mais barato';
-
-    const implBiRate = bBRL / (aKK / 1000);
-    const diffRatePct = Math.abs((1 - implBiRate / biRate) * 100);
-    $('implicitNote').style.display = '';
-    $('implicitNote').innerHTML = `Comprar direto em <strong>R$</strong> equivale a pagar <strong>${fmtBRL(implBiRate)}</strong> no bi — <strong>${diffRatePct.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 })}% mais barato</strong> que a cotação atual de ${fmtBRL(biRate)}/bi.`;
-  } else {
-    sideA.classList.remove('winner', 'loser');
-    sideB.classList.remove('winner', 'loser');
-    vc.classList.add('neutral');
-    vt.textContent = '⚖ Ambas as opções custam igual';
-    $('vEco').textContent = 'R$ 0,00';
-    $('vEcoKK').textContent = '0 kk';
-    $('vPct').textContent = '0,00%';
-    $('implicitNote').style.display = 'none';
-  }
-
-  const total = aBRL + bBRL;
-  const pA = Math.max(4, Math.min(96, (aBRL / total) * 100));
-  $('barFillA').style.width = pA + '%';
-  $('barLabelA').textContent = fmtBRL(aBRL);
-  $('barLabelB').textContent = fmtBRL(bBRL);
-}
-
-/* ─── Toggle kk / bi do Comparador ─────────────────────── */
-function setCmpUnit(newUnit, shouldConvert = true) {
-  const hidden = $('cmpAUnit');
-  const oldUnit = hidden ? hidden.value : 'kk';
-  if (hidden) hidden.value = newUnit;
-
-  const optKK = $('cmpOptKK');
-  const optBI = $('cmpOptBI');
-  if (optKK) optKK.classList.toggle('active', newUnit === 'kk');
-  if (optBI) optBI.classList.toggle('active', newUnit === 'bi');
-
-  const input = $('cmpA');
-  if (input) {
-    input.placeholder = newUnit === 'kk' ? 'Ex: 10.000' : 'Ex: 10';
-    const val = parseBR(input.value);
-    if (isFinite(val) && val > 0) {
-      if (shouldConvert && oldUnit !== newUnit) {
-        if (newUnit === 'bi') {
-          // Converte kk para bi
-          input.value = fmtNumBR(val / 1000, 4);
-        } else {
-          // Converte bi para kk
-          input.value = fmtNumBR(val * 1000, 3);
-        }
-      } else {
-        input.value = newUnit === 'bi' ? fmtNumBR(val, 4) : fmtNumBR(val, 3);
-      }
-    }
-  }
-
-  calcCompare();
-}
-
-const cmpToggle = $('cmpToggle');
-if (cmpToggle) {
-  cmpToggle.addEventListener('click', e => {
-    const targetOpt = e.target.closest('.unit-opt');
-    const current = $('cmpAUnit').value;
-    let next = current === 'kk' ? 'bi' : 'kk';
-    if (targetOpt && targetOpt.dataset.val) {
-      next = targetOpt.dataset.val;
-    }
-    setCmpUnit(next, true);
-  });
-}
-
-// Seleção inteligente e formatação no campo cmpA
-let cmpAWasAllSelected = false;
-$('cmpA').addEventListener('mousedown', function () {
-  cmpAWasAllSelected = (this.selectionStart === 0 && this.selectionEnd === this.value.length && this.value.length > 0);
-});
-$('cmpA').addEventListener('click', function () {
-  if (cmpAWasAllSelected) {
-    cmpAWasAllSelected = false;
-  } else {
-    this.select();
-  }
-});
-$('cmpA').addEventListener('blur', () => {
-  const v = parseBR($('cmpA').value);
-  const unit = $('cmpAUnit').value;
-  if (isFinite(v) && v > 0) {
-    $('cmpA').value = unit === 'bi' ? fmtNumBR(v, 4) : fmtNumBR(v, 3);
-  }
-  cmpAWasAllSelected = false;
-});
-$('cmpA').addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    const v = parseBR($('cmpA').value);
-    const unit = $('cmpAUnit').value;
-    if (isFinite(v) && v > 0) {
-      $('cmpA').value = unit === 'bi' ? fmtNumBR(v, 4) : fmtNumBR(v, 3);
-    }
-    calcCompare();
-  }
-});
-$('cmpA').addEventListener('input', calcCompare);
-$('cmpB').addEventListener('input', calcCompare);
-
-// Formatação padrão BR no blur/Enter do campo de Reais da Opção B
-let cmpBWasAllSelected = false;
-$('cmpB').addEventListener('mousedown', function () {
-  cmpBWasAllSelected = (this.selectionStart === 0 && this.selectionEnd === this.value.length && this.value.length > 0);
-});
-$('cmpB').addEventListener('click', function () {
-  if (cmpBWasAllSelected) {
-    cmpBWasAllSelected = false;
-  } else {
-    this.select();
-  }
-});
-$('cmpB').addEventListener('blur', () => {
-  const v = parseBR($('cmpB').value);
-  if (isFinite(v) && v > 0) {
-    $('cmpB').value = fmtBRLraw(v, 2);
-  }
-  cmpBWasAllSelected = false;
-});
-$('cmpB').addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    const v = parseBR($('cmpB').value);
-    if (isFinite(v) && v > 0) $('cmpB').value = fmtBRLraw(v, 2);
-    calcCompare();
-  }
-});
-
-/* ═══════════════════════════════════════════════════════════
-   MÓDULO 3 — CONVERSOR RÁPIDO BIDIRECIONAL
-══════════════════════════════════════════════════════════ */
-function calcConv(source) {
-  if (convLock) return;
-  convLock = true;
-  const hasRate = (biRate && biRate > 0);
-  const kkRate = hasRate ? biRate / 1000 : 0;
-
-  if (source === 'brl') {
-    const v = parseBR($('convBRL').value);
-    if (hasRate && isFinite(v) && v >= 0) {
-      const kk = v / kkRate;
-      $('convKK').value = kk === 0 ? '' : fmtNumBR(kk, 4);
-      $('convBI').value = kk === 0 ? '' : fmtNumBR(kk / 1000, 6);
-    } else { $('convKK').value = ''; $('convBI').value = ''; }
-  } else if (source === 'kk') {
-    const v = parseBR($('convKK').value);
-    if (isFinite(v) && v >= 0) {
-      $('convBRL').value = (hasRate && v > 0) ? fmtBRLraw(v * kkRate, 2) : '';
-      $('convBI').value = v === 0 ? '' : fmtNumBR(v / 1000, 6);
-    } else { $('convBRL').value = ''; $('convBI').value = ''; }
-  } else if (source === 'bi') {
-    const v = parseBR($('convBI').value);
-    if (isFinite(v) && v >= 0) {
-      const kk = v * 1000;
-      $('convBRL').value = (hasRate && kk > 0) ? fmtBRLraw(kk * kkRate, 2) : '';
-      $('convKK').value = v === 0 ? '' : fmtNumBR(kk, 4);
-    } else { $('convBRL').value = ''; $('convKK').value = ''; }
-  }
-
-  convLock = false;
-}
-
-$('convBRL').addEventListener('input', () => calcConv('brl'));
-$('convKK').addEventListener('input', () => calcConv('kk'));
-$('convBI').addEventListener('input', () => calcConv('bi'));
-
-// Formatação padrão BR no blur/Enter do campo de Reais do Conversor
-let convBRLWasAllSelected = false;
-$('convBRL').addEventListener('mousedown', function () {
-  convBRLWasAllSelected = (this.selectionStart === 0 && this.selectionEnd === this.value.length && this.value.length > 0);
-});
-$('convBRL').addEventListener('click', function () {
-  if (convBRLWasAllSelected) {
-    convBRLWasAllSelected = false;
-  } else {
-    this.select();
-  }
-});
-$('convBRL').addEventListener('blur', () => {
-  const v = parseBR($('convBRL').value);
-  if (isFinite(v) && v > 0) {
-    $('convBRL').value = fmtBRLraw(v, 2);
-  }
-  convBRLWasAllSelected = false;
-});
-$('convBRL').addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    const v = parseBR($('convBRL').value);
-    if (isFinite(v) && v > 0) $('convBRL').value = fmtBRLraw(v, 2);
-    calcConv('brl');
-  }
-});
-
-/* ═══════════════════════════════════════════════════════════
-   TABELA DE REFERÊNCIA RÁPIDA
-══════════════════════════════════════════════════════════ */
-const REF_VALUES = [
-  { label: '1 kk', kk: 1 },
-  { label: '10 kk', kk: 10 },
-  { label: '50 kk', kk: 50 },
-  { label: '100 kk', kk: 100 },
-  { label: '250 kk', kk: 250 },
-  { label: '500 kk', kk: 500 },
-  { label: '1 bi', kk: 1000, sep: true },
-  { label: '2 bi', kk: 2000 },
-  { label: '5 bi', kk: 5000 },
-  { label: '10 bi', kk: 10000 },
-  { label: '20 bi', kk: 20000 },
-  { label: '50 bi', kk: 50000 },
-  { label: '100 bi', kk: 100000 },
-];
-
-function renderTable() {
-  const hasRate = (biRate && biRate > 0);
-  const kkRate = hasRate ? biRate / 1000 : 0;
-  const tbody = $('refBody');
-  tbody.innerHTML = '';
-  REF_VALUES.forEach(row => {
-    const tr = document.createElement('tr');
-    if (row.sep) tr.classList.add('sep');
-    const brl = hasRate ? fmtBRL(row.kk * kkRate) : '—';
-    tr.innerHTML = `
-  <td>${row.label}</td>
-  <td>${row.kk.toLocaleString('pt-BR')} kk</td>
-  <td>${(row.kk / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} bi</td>
-  <td class="${row.kk >= 1000 && hasRate ? 'hl' : ''}">${brl}</td>
-`;
-    tbody.appendChild(tr);
-  });
-}
-
-/* ═══════════════════════════════════════════════════════════
-   TOAST
-══════════════════════════════════════════════════════════ */
 let toastTimer;
 function showToast(msg) {
-  $('toastMsg').textContent = msg;
+  setText('toastMsg', msg);
   const t = $('toast');
   t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
 }
 
+async function copyText(txt) {
+  try {
+    await navigator.clipboard.writeText(txt);
+    return true;
+  } catch (_) { /* cai no plano B */ }
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = txt;
+    ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;top:-1000px;opacity:0';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    ta.remove();
+    return ok;
+  } catch (_) {
+    return false;
+  }
+}
+
+document.addEventListener('click', e => {
+  const btn = e.target.closest('[data-copy]');
+  if (!btn) return;
+  const txt = $(btn.dataset.copy).textContent
+    .replace(/^R\$[\s\u00a0]*/, '')
+    .replace(/\u00a0/g, ' ')
+    .trim();
+  if (!txt || txt === '—') { showToast('Nada para copiar ainda'); return; }
+  copyText(txt).then(ok => showToast(ok ? 'Valor copiado: ' + txt : 'Não foi possível copiar'));
+});
+
+/* ═══════════════════════════════════════════════════════════
+   CAMPO DE MOEDAS (kk / bi) — usado em 3 lugares
+   • guarda o valor sempre em kk internamente
+   • a partir de 1.000 kk troca sozinho para bi
+══════════════════════════════════════════════════════════ */
+function createCoinField({ inputId, toggleId, onChange }) {
+  const input = $(inputId);
+  const toggle = $(toggleId);
+  const opts = toggle.querySelectorAll('.unit-opt');
+  let unit = 'kk';
+  let autoBi = false;   // true = o bi foi escolhido pelo app (e não pela pessoa)
+  let timer = null;
+
+  function paint() {
+    opts.forEach(o => {
+      const on = o.dataset.val === unit;
+      o.classList.toggle('active', on);
+      o.setAttribute('aria-pressed', String(on));
+    });
+    input.placeholder = unit === 'bi' ? 'Ex: 1,5' : 'Ex: 500';
+  }
+
+  // valor em kk (NaN se vazio/inválido)
+  function getKK() {
+    const v = parseBR(input.value);
+    if (!isFinite(v) || v <= 0) return NaN;
+    return unit === 'bi' ? v * KK_PER_BI : v;
+  }
+
+  function setUnit(next) {
+    if (next === unit) return;
+    const kk = getKK();
+    if (next === 'kk' && kk >= KK_PER_BI) return;   // acima de 999 kk só existe em bi
+    unit = next;
+    paint();
+    if (isFinite(kk)) input.value = coinFieldText(kk, unit);
+  }
+
+  // formata o campo e troca para bi se passou de 999 kk
+  function commit() {
+    clearTimeout(timer);
+    const kk = getKK();
+    if (!isFinite(kk)) return;
+    if (unit === 'kk' && kk >= KK_PER_BI) { unit = 'bi'; autoBi = true; paint(); }
+    input.value = coinFieldText(kk, unit);
+  }
+
+  // preenche por código, já na unidade certa
+  function setKK(kk) {
+    clearTimeout(timer);
+    if (!isFinite(kk) || kk <= 0) { clear(); return; }
+    unit = kk >= KK_PER_BI ? 'bi' : 'kk';
+    autoBi = unit === 'bi';
+    paint();
+    input.value = coinFieldText(kk, unit);
+  }
+
+  function clear(resetUnit = false) {
+    clearTimeout(timer);
+    input.value = '';
+    if (resetUnit || autoBi) { unit = 'kk'; autoBi = false; paint(); }
+  }
+
+  // Se o bi veio do app e a pessoa começa um número novo (texto todo selecionado),
+  // volta para kk antes da digitação entrar
+  input.addEventListener('beforeinput', e => {
+    if (!autoBi || !e.inputType || !e.inputType.startsWith('insert')) return;
+    const allSelected = input.value.length > 0 &&
+      input.selectionStart === 0 && input.selectionEnd === input.value.length;
+    if (allSelected) { unit = 'kk'; autoBi = false; paint(); }
+  });
+
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    // Campo apagado: volta para kk
+    if (autoBi && input.value.trim() === '') { unit = 'kk'; autoBi = false; paint(); }
+    // Não mexe no texto enquanto a pessoa digita; troca para bi quando ela faz uma pausa
+    if (unit === 'kk' && getKK() >= KK_PER_BI) timer = setTimeout(commit, AUTO_BI_DELAY);
+    if (onChange) onChange('typing');
+  });
+  input.addEventListener('blur', commit);
+
+  toggle.addEventListener('click', e => {
+    const opt = e.target.closest('.unit-opt');
+    setUnit(opt ? opt.dataset.val : (unit === 'kk' ? 'bi' : 'kk'));
+    autoBi = false;   // escolha manual da pessoa
+    if (onChange) onChange('unit');
+  });
+
+  smartSelect(input);
+  paint();
+
+  return {
+    input, getKK, setKK, clear, commit,
+    hasText: () => input.value.trim() !== '',
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════
+   COTAÇÃO
+══════════════════════════════════════════════════════════ */
+function updatePills() {
+  if (!hasRate()) {
+    setText('pill-kk', '—');
+    setText('pill-rl', '—');
+    return;
+  }
+  setText('pill-kk', 'R$' + NBSP + nf(kkRate(), 3, 6));
+  setText('pill-rl', fmtCoins(1 / kkRate()));
+}
+
+function applyRate(format = false) {
+  const inp = $('biRate');
+  const v = parseBR(inp.value);
+  biRate = (isFinite(v) && v > 0) ? v : 0;
+
+  if (hasRate()) {
+    if (LEMBRAR_COTACAO) store.set(STORAGE_KEY, String(biRate));
+    if (format) inp.value = nf(biRate, 2);
+  } else if (format) {
+    inp.value = '';
+  }
+
+  updatePills();
+  refreshAll();
+}
+
+$('biRate').addEventListener('input', () => applyRate(false));
+$('biRate').addEventListener('blur', () => applyRate(true));
+$('biRate').addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    applyRate(true);
+    if (hasRate()) flashButton($('biCalcBtn'), '✓ Atualizado!');
+  }
+});
+$('biCalcBtn').addEventListener('click', () => {
+  applyRate(true);
+  if (hasRate()) flashButton($('biCalcBtn'), '✓ Atualizado!');
+});
+smartSelect($('biRate'));
+
+/* ═══════════════════════════════════════════════════════════
+   MÓDULO 1 — CALCULADORA DE ITEM E LOTE
+══════════════════════════════════════════════════════════ */
+const itemField = createCoinField({
+  inputId: 'itemPrice',
+  toggleId: 'unitToggle',
+  onChange: () => calcItem(),
+});
+const qtyInput = $('itemQty');
+
+function getQty() {
+  const q = parseInt(qtyInput.value, 10);
+  return (Number.isFinite(q) && q >= 1) ? Math.min(q, QTY_MAX) : 1;
+}
+
+function getItem() {
+  const unitKK = itemField.getKK();
+  if (!isFinite(unitKK)) return { valid: false };
+  const qty = getQty();
+  return { valid: true, unitKK, qty, totalKK: unitKK * qty };
+}
+
+function calcItem() {
+  const d = getItem();
+
+  if (!d.valid) {
+    ['unitBRL', 'unitBRLexact', 'totalCoins', 'totalCoinsSub', 'totalBRL', 'totalBRLsub',
+      'simBiCount', 'simBiCost', 'simBiChange'].forEach(id => setText(id, '—'));
+    setText('simNote', hasRate()
+      ? 'Configure o preço do item acima para ver a simulação.'
+      : 'Defina o valor da cotação no topo para ver os cálculos.');
+    syncComparador(false);
+    return;
+  }
+
+  const { unitKK, totalKK, qty } = d;
+  const unitBRL = unitKK * kkRate();
+  const totalBRL = totalKK * kkRate();
+
+  // Custo unitário
+  setText('unitBRL', hasRate() ? fmtBRL(unitBRL) : '—');
+  setText('unitBRLexact', hasRate()
+    ? `${fmtCoins(unitKK)} · exato ${fmtBRL(unitBRL, 4)}`
+    : 'aguardando cotação');
+
+  // Total do lote (kk até 999, bi acima)
+  setText('totalCoins', fmtCoins(totalKK));
+  setText('totalCoinsSub', `${nf(qty)} un. × ${fmtCoins(unitKK)}`);
+
+  // Total em reais
+  setText('totalBRL', hasRate() ? fmtBRL(totalBRL) : '—');
+  setText('totalBRLsub', hasRate() ? `${nf(qty)} un. × ${fmtBRL(unitBRL)}` : 'aguardando cotação');
+
+  // Simulador de pacote fechado
+  const totalBI = totalKK / KK_PER_BI;
+  const biNeeded = Math.max(1, Math.ceil(totalBI - 1e-9));
+  let changeKK = (biNeeded - totalBI) * KK_PER_BI;
+  if (changeKK < 1e-6) changeKK = 0;
+  const biCost = biNeeded * biRate;
+  const pacote = `${nf(biNeeded)} bi fechado${biNeeded > 1 ? 's' : ''}`;
+
+  setText('simBiCount', nf(biNeeded));
+  setText('simBiCost', hasRate() ? fmtBRL(biCost) : '—');
+  setText('simBiChange', fmtCoins(changeKK));
+
+  const note = $('simNote');
+  if (!hasRate()) {
+    note.textContent = 'Defina a cotação do bi no topo para calcular o pacote fechado.';
+  } else if (changeKK === 0) {
+    note.innerHTML = `Comprando <strong>${pacote}</strong> por <strong>${fmtBRL(biCost)}</strong>, você paga o item exato sem sobrar troco.`;
+  } else {
+    note.innerHTML = `Comprando <strong>${pacote}</strong> por <strong>${fmtBRL(biCost)}</strong>, você paga o item e fica com <strong>${fmtCoins(changeKK)}</strong> de troco na bag.`;
+  }
+
+  syncComparador(false);
+}
+
+function runItemCalc() {
+  itemField.commit();
+  calcItem();
+  syncComparador(true);
+  flashButton($('calcBtn'), '✓ Calculado!');
+}
+
+$('calcBtn').addEventListener('click', runItemCalc);
+[itemField.input, qtyInput].forEach(el => {
+  el.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); runItemCalc(); }
+  });
+});
+
+qtyInput.addEventListener('input', calcItem);
+qtyInput.addEventListener('blur', () => { qtyInput.value = getQty(); calcItem(); });
+$('qtyMinus').addEventListener('click', () => { qtyInput.value = Math.max(1, getQty() - 1); calcItem(); });
+$('qtyPlus').addEventListener('click', () => { qtyInput.value = Math.min(QTY_MAX, getQty() + 1); calcItem(); });
+
+$('resetItemBtn').addEventListener('click', () => {
+  itemField.clear(true);
+  qtyInput.value = '1';
+
+  const btn = $('resetItemBtn');
+  btn.classList.add('spin');
+  setTimeout(() => btn.classList.remove('spin'), 450);
+
+  calcItem();
+  showToast('Campos resetados!');
+});
+
+/* ═══════════════════════════════════════════════════════════
+   MÓDULO 2 — COMPARADOR INTELIGENTE
+══════════════════════════════════════════════════════════ */
+let cmpAuto = false;   // true = o campo da Opção A foi preenchido automaticamente pelo Módulo 1
+
+const cmpField = createCoinField({
+  inputId: 'cmpA',
+  toggleId: 'cmpToggle',
+  onChange: source => {
+    if (source === 'typing') cmpAuto = false;   // a pessoa digitou: não sobrescrever
+    calcCompare();
+  },
+});
+
+// Copia o total do lote para a Opção A (só sobrescreve o que foi preenchido automaticamente)
+function syncComparador(force = false) {
+  const d = getItem();
+
+  if (!d.valid) {
+    if (cmpAuto) { cmpField.clear(true); cmpAuto = false; calcCompare(); }
+    return;
+  }
+  if (!force && !cmpAuto && cmpField.hasText()) return;
+
+  cmpField.setKK(d.totalKK);
+  cmpAuto = true;
+  calcCompare();
+}
+
+function calcCompare() {
+  const aKK = cmpField.getKK();
+  const bRaw = parseBR($('cmpB').value);
+  const bBRL = (isFinite(bRaw) && bRaw > 0) ? bRaw : NaN;
+  const aBRL = (hasRate() && isFinite(aKK)) ? aKK * kkRate() : NaN;
+
+  setText('cmpAPrice', isFinite(aBRL) ? fmtBRL(aBRL) : '—');
+  setText('cmpBPrice', isFinite(bBRL) ? fmtBRL(bBRL) : '—');
+  setText('cmpANote', hasRate() ? 'custo em Reais (cotação atual)' : 'defina a cotação no topo');
+
+  const sideA = $('sideA'), sideB = $('sideB');
+  const vc = $('verdictCard');
+  sideA.classList.remove('winner', 'loser');
+  sideB.classList.remove('winner', 'loser');
+  vc.classList.remove('neutral', 'red-verdict');
+
+  const neutral = title => {
+    vc.classList.add('neutral');
+    setText('verdictTitle', title);
+    ['vEco', 'vEcoCoins', 'vPct'].forEach(id => setText(id, '—'));
+    setText('barLabelA', 'Opção A');
+    setText('barLabelB', 'Opção B');
+    $('barFillA').style.width = '50%';
+    $('implicitNote').hidden = true;
+  };
+
+  if (!hasRate()) return neutral('⟳ Defina o valor da cotação no topo da página');
+  if (!isFinite(aBRL) || !isFinite(bBRL)) return neutral('⟳ Preencha os dois campos para ver o veredito');
+
+  const aCents = Math.round(aBRL * 100);
+  const bCents = Math.round(bBRL * 100);
+  const diff = Math.abs(aBRL - bBRL);
+
+  // Cotação implícita: quanto o bi custaria comprando direto em R$
+  const implBiRate = bBRL / (aKK / KK_PER_BI);
+  const implPct = nf(Math.abs((implBiRate / biRate - 1) * 100), 1, 2);
+  const note = $('implicitNote');
+
+  if (aCents < bCents) {
+    sideA.classList.add('winner');
+    sideB.classList.add('loser');
+    setText('verdictTitle', '✓ Usar Moedas do Jogo vale mais a pena!');
+    setText('vPct', fmtPct((1 - aBRL / bBRL) * 100) + ' mais barato');
+    note.innerHTML = `Comprar direto em <strong>R$</strong> equivale a pagar <strong>${fmtBRL(implBiRate)}</strong> no bi — a cotação implícita é <strong>${implPct}% mais cara</strong> que a cotação atual de ${fmtBRL(biRate)}/bi.`;
+    note.hidden = false;
+  } else if (bCents < aCents) {
+    sideB.classList.add('winner');
+    sideA.classList.add('loser');
+    vc.classList.add('red-verdict');
+    setText('verdictTitle', '✓ Comprar por Dinheiro Real vale mais a pena!');
+    setText('vPct', fmtPct((1 - bBRL / aBRL) * 100) + ' mais barato');
+    note.innerHTML = `Comprar direto em <strong>R$</strong> equivale a pagar <strong>${fmtBRL(implBiRate)}</strong> no bi — <strong>${implPct}% mais barato</strong> que a cotação atual de ${fmtBRL(biRate)}/bi.`;
+    note.hidden = false;
+  } else {
+    vc.classList.add('neutral');
+    setText('verdictTitle', '⚖ Ambas as opções custam igual');
+    setText('vPct', '0,00%');
+    note.hidden = true;
+  }
+
+  if (aCents === bCents) {
+    setText('vEco', fmtBRL(0));
+    setText('vEcoCoins', fmtKK(0));
+  } else {
+    setText('vEco', fmtBRL(diff));
+    setText('vEcoCoins', fmtCoins(diff / kkRate()));
+  }
+
+  const pA = Math.max(4, Math.min(96, (aBRL / (aBRL + bBRL)) * 100));
+  $('barFillA').style.width = pA + '%';
+  setText('barLabelA', fmtBRL(aBRL));
+  setText('barLabelB', fmtBRL(bBRL));
+}
+
+// Campo de reais da Opção B
+const cmpB = $('cmpB');
+cmpB.addEventListener('input', calcCompare);
+cmpB.addEventListener('blur', () => {
+  const v = parseBR(cmpB.value);
+  if (isFinite(v) && v > 0) cmpB.value = nf(v, 2);
+});
+cmpB.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const v = parseBR(cmpB.value);
+    if (isFinite(v) && v > 0) cmpB.value = nf(v, 2);
+    calcCompare();
+  }
+});
+smartSelect(cmpB);
+
+/* ═══════════════════════════════════════════════════════════
+   MÓDULO 3 — CONVERSOR RÁPIDO BIDIRECIONAL (R$ ⇄ moedas)
+══════════════════════════════════════════════════════════ */
+let convSource = 'brl';   // último campo que a pessoa mexeu
+
+const convBRL = $('convBRL');
+const convField = createCoinField({
+  inputId: 'convCoin',
+  toggleId: 'convToggle',
+  onChange: () => convFrom('coin'),
+});
+
+function convFrom(source) {
+  convSource = source;
+
+  if (source === 'brl') {
+    const brl = parseBR(convBRL.value);
+    if (hasRate() && isFinite(brl) && brl > 0) convField.setKK(brl / kkRate());
+    else convField.clear();
+  } else {
+    const kk = convField.getKK();
+    convBRL.value = (hasRate() && isFinite(kk)) ? nf(kk * kkRate(), 2) : '';
+  }
+}
+
+function refreshConv() { convFrom(convSource); }
+
+convBRL.addEventListener('input', () => convFrom('brl'));
+convBRL.addEventListener('blur', () => {
+  const v = parseBR(convBRL.value);
+  if (isFinite(v) && v > 0) convBRL.value = nf(v, 2);
+});
+convBRL.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const v = parseBR(convBRL.value);
+    if (isFinite(v) && v > 0) convBRL.value = nf(v, 2);
+    convFrom('brl');
+  }
+});
+smartSelect(convBRL);
+
+/* ═══════════════════════════════════════════════════════════
+   TABELA DE REFERÊNCIA RÁPIDA
+══════════════════════════════════════════════════════════ */
+const REF_KK = [1, 10, 50, 100, 250, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000];
+
+function renderTable() {
+  $('refBody').innerHTML = REF_KK.map(kk => {
+    const big = kk >= KK_PER_BI;
+    const brl = hasRate() ? fmtBRL(kk * kkRate()) : '—';
+    return `<tr${kk === KK_PER_BI ? ' class="sep"' : ''}>` +
+      `<td>${fmtCoins(kk)}</td>` +
+      `<td${big && hasRate() ? ' class="hl"' : ''}>${brl}</td></tr>`;
+  }).join('');
+}
+
 /* ═══════════════════════════════════════════════════════════
    INIT
 ══════════════════════════════════════════════════════════ */
-initRate();
-calcItem();
-calcCompare();
-renderTable();
+function refreshAll() {
+  calcItem();
+  calcCompare();
+  refreshConv();
+  renderTable();
+}
+
+(function init() {
+  if (LEMBRAR_COTACAO) {
+    const saved = parseFloat(store.get(STORAGE_KEY));
+    if (saved > 0) {
+      biRate = saved;
+      $('biRate').value = nf(saved, 2);
+    }
+  }
+  updatePills();
+  refreshAll();
+})();

@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#08080C" />
   <title>Calculadora</title>
   <link rel="icon" type="image/png" href="logo-pw.png" />
   <link rel="shortcut icon" type="image/png" href="logo-pw.png" />
@@ -21,7 +22,6 @@
   <div class="bg-effects" aria-hidden="true">
     <div class="bg-grid"></div>
     <div class="bg-glow-gold"></div>
-    <div class="bg-glow-blue"></div>
     <div class="bg-glow-violet"></div>
   </div>
 
@@ -29,7 +29,7 @@
 
     <!-- ════ HEADER ════ -->
     <header class="app-header">
-      <img src="logo-pw.png" alt="Logo Perfect World" class="logo-img" />
+      <img src="logo-pw.png" alt="Logo Perfect World" class="logo-img" width="48" height="48" decoding="async" />
       <div class="logo-text">
         <h1>Calculadora</h1>
         <p>Calculadora de Economia · Perfect World</p>
@@ -40,24 +40,23 @@
     <div class="cotacao-bar">
       <div class="cotacao-inner">
         <span class="cotacao-label">Cotação</span>
-        <div style="display:flex; align-items:center; gap:.4rem;">
-          <span
-            style="font-family:'JetBrains Mono',monospace; font-size:.88rem; color:var(--text-muted); white-space:nowrap;">1
-            bi =</span>
-          <span
-            style="font-family:'JetBrains Mono',monospace; font-size:.88rem; font-weight:600; color:var(--text-muted);">R$</span>
+
+        <div class="cotacao-rate">
+          <span class="cotacao-prefix">1 bi =</span>
+          <span class="cotacao-prefix cur">R$</span>
           <div class="cotacao-input-wrap">
-            <input type="text" id="biRate" placeholder="0,00" autocomplete="off" inputmode="decimal" />
+            <input type="text" id="biRate" placeholder="0,00" autocomplete="off" inputmode="decimal"
+              aria-label="Cotação de 1 bi em reais" />
           </div>
-          <button class="btn btn-gold" id="biCalcBtn" title="Atualizar cotação (Enter)"
-            style="padding:.42rem .9rem; font-size:.8rem; border-radius:var(--radius-sm); flex-shrink:0; height:100%;">
+          <button type="button" class="btn btn-gold btn-sm" id="biCalcBtn" title="Atualizar cotação (Enter)">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-              stroke-linecap="round" stroke-linejoin="round">
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M20 12a8 8 0 0 1-8 8M4 12a8 8 0 0 1 8-8M20 4l-2 2 2 2M4 8l2-2-2-2" />
             </svg>
-            Atualizar
+            <span class="btn-label">Atualizar</span>
           </button>
         </div>
+
         <div class="cotacao-pills">
           <div class="pill gold">
             <span class="label">1 kk =</span>
@@ -76,44 +75,45 @@
       <div class="section-header">
         <div class="section-badge">1</div>
         <span class="section-title">Calculadora de Item e Lote</span>
-        <span class="section-subtitle text-muted">kk / bi → R$</span>
+        <span class="section-subtitle">kk / bi → R$</span>
       </div>
 
       <div class="card">
         <div class="card-row cols-2">
           <div class="field">
-            <label class="field-label">Preço Unitário</label>
-            <div style="display:flex; gap:.5rem; align-items:stretch;">
-              <div class="input-group" style="flex:1;">
-                <input type="text" id="itemPrice" placeholder="0" autocomplete="off" inputmode="decimal" />
-                <!-- Toggle kk / bi -->
-                <div class="unit-toggle" id="unitToggle" title="Clique para alternar entre kk e bi">
-                  <span class="unit-opt active" data-val="kk">kk</span>
-                  <span class="unit-sep">/</span>
-                  <span class="unit-opt" data-val="bi">bi</span>
+            <label class="field-label" for="itemPrice">Preço Unitário</label>
+            <div class="price-row">
+              <div class="input-group">
+                <input type="text" id="itemPrice" placeholder="Ex: 500" autocomplete="off" inputmode="decimal" />
+                <div class="unit-toggle" id="unitToggle" role="group" aria-label="Unidade do preço"
+                  title="Clique para alternar entre kk e bi">
+                  <button type="button" class="unit-opt active" data-val="kk" aria-pressed="true">kk</button>
+                  <span class="unit-sep" aria-hidden="true">/</span>
+                  <button type="button" class="unit-opt" data-val="bi" aria-pressed="false">bi</button>
                 </div>
-                <input type="hidden" id="itemUnit" value="kk" />
               </div>
-              <button class="btn btn-gold" id="calcBtn" title="Calcular (Enter)"
-                style="padding:.6rem 1.1rem; font-size:.82rem; border-radius:var(--radius-sm); flex-shrink:0;">
+              <button type="button" class="btn btn-gold" id="calcBtn" title="Calcular (Enter)">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-                  stroke-linecap="round" stroke-linejoin="round">
+                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <path d="M5 12h14M12 5l7 7-7 7" />
                 </svg>
-                Calcular
+                <span class="btn-label">Calcular</span>
               </button>
             </div>
           </div>
+
           <div class="field">
-            <label class="field-label">Quantidade</label>
-            <div style="display:flex; align-items:center; gap:.5rem;">
+            <label class="field-label" for="itemQty">Quantidade</label>
+            <div class="qty-row">
               <div class="qty-wrap">
-                <button class="qty-btn" id="qtyMinus">−</button>
-                <input class="qty-input" type="number" id="itemQty" value="1" min="1" max="99999" />
-                <button class="qty-btn" id="qtyPlus">+</button>
+                <button type="button" class="qty-btn" id="qtyMinus" aria-label="Diminuir quantidade">−</button>
+                <input class="qty-input" type="number" id="itemQty" value="1" min="1" max="99999" inputmode="numeric" />
+                <button type="button" class="qty-btn" id="qtyPlus" aria-label="Aumentar quantidade">+</button>
               </div>
-              <button class="btn-reset" id="resetItemBtn" title="Resetar preço unitário e quantidade" aria-label="Resetar calculadora">
-                <svg class="reset-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <button type="button" class="btn-reset" id="resetItemBtn" title="Resetar preço unitário e quantidade"
+                aria-label="Resetar calculadora">
+                <svg class="reset-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
                   <path d="M21 3v5h-5" />
                   <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
@@ -125,36 +125,33 @@
           </div>
         </div>
 
-        <!-- Results -->
-        <div class="result-grid" id="resultGrid">
+        <!-- Resultados -->
+        <div class="result-grid">
           <div class="result-card">
             <div class="result-card-label">
-              Custo Unitário
-              <button class="btn-copy btn" onclick="copyVal('unitBRL')" title="Copiar">⎘</button>
+              <span>Custo Unitário</span>
+              <button type="button" class="btn btn-copy" data-copy="unitBRL" title="Copiar"
+                aria-label="Copiar custo unitário">⎘</button>
             </div>
             <div class="result-card-value" id="unitBRL">—</div>
             <div class="result-card-sub" id="unitBRLexact">—</div>
           </div>
-          <div class="result-card accent-gold" id="cardKK">
+
+          <div class="result-card accent-gold">
             <div class="result-card-label">
-              <span id="labelKK">Total em kk</span>
-              <button class="btn-copy btn" onclick="copyVal('totalKK')" title="Copiar">⎘</button>
+              <span>Total do Lote</span>
+              <button type="button" class="btn btn-copy" data-copy="totalCoins" title="Copiar"
+                aria-label="Copiar total do lote">⎘</button>
             </div>
-            <div class="result-card-value" id="totalKK">—</div>
-            <div class="result-card-sub" id="subKK">—</div>
+            <div class="result-card-value" id="totalCoins">—</div>
+            <div class="result-card-sub" id="totalCoinsSub">—</div>
           </div>
-          <div class="result-card" id="cardBI">
-            <div class="result-card-label">
-              <span id="labelBI">Total em bi</span>
-              <button class="btn-copy btn" onclick="copyVal('totalBI')" title="Copiar">⎘</button>
-            </div>
-            <div class="result-card-value" id="totalBI">—</div>
-            <div class="result-card-sub" id="subBI">—</div>
-          </div>
+
           <div class="result-card accent-green">
             <div class="result-card-label">
-              Total Exato em R$
-              <button class="btn-copy btn" onclick="copyVal('totalBRL')" title="Copiar">⎘</button>
+              <span>Total Exato em R$</span>
+              <button type="button" class="btn btn-copy" data-copy="totalBRL" title="Copiar"
+                aria-label="Copiar total em reais">⎘</button>
             </div>
             <div class="result-card-value" id="totalBRL">—</div>
             <div class="result-card-sub" id="totalBRLsub">—</div>
@@ -162,10 +159,10 @@
         </div>
 
         <!-- Simulador BI -->
-        <div class="bi-sim-card" id="biSimCard">
+        <div class="bi-sim-card">
           <div class="header">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-              stroke-linecap="round" stroke-linejoin="round">
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <circle cx="12" cy="12" r="10" />
               <path d="M12 8v4l3 3" />
             </svg>
@@ -197,7 +194,7 @@
       <div class="section-header">
         <div class="section-badge">2</div>
         <span class="section-title">Comparador Inteligente</span>
-        <span class="section-subtitle text-muted">bi/kk vs Dinheiro Real</span>
+        <span class="section-subtitle">bi/kk vs Dinheiro Real</span>
       </div>
 
       <div class="card">
@@ -205,20 +202,19 @@
           <!-- Opção A: Moedas -->
           <div class="compare-side" id="sideA">
             <div class="compare-side-header">
-              <div class="dot" style="background: var(--gold); box-shadow: 0 0 10px rgba(245, 158, 11, .5);"></div>
+              <span class="dot gold"></span>
               Opção A — Via Moedas do Jogo
             </div>
             <div class="field">
-              <label class="field-label">Preço em Moedas</label>
+              <label class="field-label" for="cmpA">Preço em Moedas</label>
               <div class="input-group">
-                <input type="text" id="cmpA" placeholder="0" autocomplete="off" inputmode="decimal" />
-                <!-- Toggle kk / bi do Comparador -->
-                <div class="unit-toggle" id="cmpToggle" title="Clique para alternar entre kk e bi">
-                  <span class="unit-opt active" data-val="kk" id="cmpOptKK">kk</span>
-                  <span class="unit-sep">/</span>
-                  <span class="unit-opt" data-val="bi" id="cmpOptBI">bi</span>
+                <input type="text" id="cmpA" placeholder="Ex: 500" autocomplete="off" inputmode="decimal" />
+                <div class="unit-toggle" id="cmpToggle" role="group" aria-label="Unidade do preço em moedas"
+                  title="Clique para alternar entre kk e bi">
+                  <button type="button" class="unit-opt active" data-val="kk" aria-pressed="true">kk</button>
+                  <span class="unit-sep" aria-hidden="true">/</span>
+                  <button type="button" class="unit-opt" data-val="bi" aria-pressed="false">bi</button>
                 </div>
-                <input type="hidden" id="cmpAUnit" value="kk" />
               </div>
             </div>
             <div class="compare-price" id="cmpAPrice">—</div>
@@ -228,11 +224,11 @@
           <!-- Opção B: Dinheiro Real -->
           <div class="compare-side" id="sideB">
             <div class="compare-side-header">
-              <div class="dot" style="background: var(--blue); box-shadow: 0 0 10px rgba(56, 189, 248, .5);"></div>
+              <span class="dot blue"></span>
               Opção B — Dinheiro Real
             </div>
             <div class="field">
-              <label class="field-label">Preço em Reais (R$)</label>
+              <label class="field-label" for="cmpB">Preço em Reais (R$)</label>
               <input type="text" class="plain-input celestial" id="cmpB" placeholder="0,00" autocomplete="off"
                 inputmode="decimal" />
             </div>
@@ -241,79 +237,81 @@
           </div>
         </div>
 
-        <!-- Verdict -->
+        <!-- Veredito -->
         <div class="verdict-card neutral" id="verdictCard">
           <div class="verdict-title" id="verdictTitle">⟳ Preencha os dois campos para ver o veredito</div>
-          <div class="verdict-row" id="verdictRow">
+          <div class="verdict-row">
             <div class="verdict-stat">
               <div class="n" id="vEco">—</div>
               <div class="l">Economia em R$</div>
             </div>
             <div class="verdict-stat">
-              <div class="n" id="vEcoKK">—</div>
-              <div class="l">Equivalente em kk</div>
+              <div class="n" id="vEcoCoins">—</div>
+              <div class="l">Equivalente em moedas</div>
             </div>
             <div class="verdict-stat">
               <div class="n" id="vPct">—</div>
               <div class="l">Vantagem (%)</div>
             </div>
           </div>
-          <div class="bar-compare" id="barCompare">
+          <div class="bar-compare">
             <div class="bar-compare-label">
-              <span id="barLabelA" style="color: var(--gold-bright); font-weight: 600;">Opção A</span>
-              <span id="barLabelB" style="color: var(--blue-bright); font-weight: 600;">Opção B</span>
+              <span id="barLabelA" class="gold-text">Opção A</span>
+              <span id="barLabelB" class="blue-text">Opção B</span>
             </div>
             <div class="bar-track">
               <div class="bar-fill-a" id="barFillA" style="width:50%"></div>
-              <div class="bar-fill-b" id="barFillB" style="flex:1"></div>
+              <div class="bar-fill-b" id="barFillB"></div>
             </div>
           </div>
-          <div class="implicit-note" id="implicitNote" style="display:none"></div>
+          <div class="implicit-note" id="implicitNote" hidden></div>
         </div>
       </div>
     </section>
 
-    <!-- ════ MÓDULO 3: CONVERSOR & TABELA DE REFERÊNCIA ════ -->
+    <!-- ════ MÓDULO 3: CONVERSOR ════ -->
     <section class="section">
       <div class="section-header">
         <div class="section-badge">3</div>
         <span class="section-title">Conversor Rápido Bidirecional</span>
+        <span class="section-subtitle">R$ ⇄ kk / bi</span>
       </div>
 
       <div class="card">
         <div class="conv-grid">
           <div class="field">
-            <label class="field-label">Reais (R$)</label>
+            <label class="field-label" for="convBRL">Reais (R$)</label>
             <input type="text" class="plain-input" id="convBRL" placeholder="0,00" autocomplete="off"
               inputmode="decimal" />
           </div>
-          <div class="conv-arrow">⇄</div>
+          <div class="conv-arrow" aria-hidden="true">⇄</div>
           <div class="field">
-            <label class="field-label">kk</label>
-            <input type="text" class="plain-input" id="convKK" placeholder="0" autocomplete="off" inputmode="decimal" />
-          </div>
-          <div class="conv-arrow">⇄</div>
-          <div class="field">
-            <label class="field-label">bi</label>
-            <input type="text" class="plain-input" id="convBI" placeholder="0" autocomplete="off" inputmode="decimal" />
+            <label class="field-label" for="convCoin">Moedas</label>
+            <div class="input-group">
+              <input type="text" id="convCoin" placeholder="Ex: 500" autocomplete="off" inputmode="decimal" />
+              <div class="unit-toggle" id="convToggle" role="group" aria-label="Unidade das moedas"
+                title="Clique para alternar entre kk e bi">
+                <button type="button" class="unit-opt active" data-val="kk" aria-pressed="true">kk</button>
+                <span class="unit-sep" aria-hidden="true">/</span>
+                <button type="button" class="unit-opt" data-val="bi" aria-pressed="false">bi</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Tabela -->
+    <!-- ════ TABELA ════ -->
     <section class="section">
       <div class="section-header">
         <div class="section-badge">📊</div>
         <span class="section-title">Tabela de Referência Rápida</span>
       </div>
-      <div class="card" style="padding: .75rem 0">
+      <div class="card card-flush">
         <table class="ref-table" id="refTable">
           <thead>
             <tr>
-              <th>Valor</th>
-              <th>Em kk</th>
-              <th>Em bi</th>
+              <th>Moedas</th>
               <th>Em R$</th>
             </tr>
           </thead>
@@ -325,8 +323,8 @@
   </div><!-- /app-wrap -->
 
   <!-- Toast -->
-  <div id="toast">
-    <div class="dot"></div><span id="toastMsg">Copiado!</span>
+  <div id="toast" role="status" aria-live="polite">
+    <span class="dot"></span><span id="toastMsg">Copiado!</span>
   </div>
 
   <script src="script.js"></script>
