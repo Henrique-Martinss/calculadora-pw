@@ -34,8 +34,10 @@ const store = {
 
 /* ═══════════════════════════════════════════════════════════
    LEITURA DE NÚMEROS (padrão pt-BR: ponto = milhar, vírgula = decimal)
+   • dotAsDecimal = true (usado nos campos kk/bi): um único ponto também é
+     tratado como decimal (ex.: 3.500 → 3,5 kk · 1.540 → 1,540 bi)
 ══════════════════════════════════════════════════════════ */
-function parseBR(raw) {
+function parseBR(raw, dotAsDecimal = false) {
   if (raw === null || raw === undefined) return NaN;
   let s = String(raw).trim().replace(/[^\d.,]/g, '');
   if (!s) return NaN;
@@ -57,10 +59,10 @@ function parseBR(raw) {
     const parts = s.split('.');
     if (parts.length > 2) {
       s = parts.join('');                           // 1.000.000 → 1000000
-    } else if (parts[1].length === 3 && parts[0].length >= 1 && parts[0].length <= 3 && parts[0] !== '0') {
-      s = parts.join('');                           // 1.540 → 1540 (milhar)
+    } else if (!dotAsDecimal && parts[1].length === 3 && parts[0].length >= 1 && parts[0].length <= 3 && parts[0] !== '0') {
+      s = parts.join('');                           // 1.540 → 1540 (milhar em R$)
     }
-    // caso contrário o ponto é decimal: 1.5 / 0.540
+    // caso contrário o ponto é decimal: 3.500 → 3.5 · 1.5 → 1.5 · 0.540 → 0.54
   }
   return parseFloat(s);
 }
@@ -84,12 +86,14 @@ function fmtKK(kk) {
 
 // Parte numérica de um valor em bi.
 // 1,540 preserva o zero (1 bi + 540 kk) · 1,5 · 1 · 1,255
-function biNumber(bi) {
+function biNumber(bi, grouping = true) {
   const kk = bi * KK_PER_BI;
   const kkInt = Math.round(kk);
   const isWhole = Math.abs(kk - kkInt) < 1e-6;
-  if (isWhole && kkInt % 10 === 0 && kkInt % 100 !== 0) return nf(bi, 3);
-  return nf(bi, 0, 4);
+  const opts = isWhole && kkInt % 10 === 0 && kkInt % 100 !== 0
+    ? { minimumFractionDigits: 3, maximumFractionDigits: 3, useGrouping: grouping }
+    : { minimumFractionDigits: 0, maximumFractionDigits: 4, useGrouping: grouping };
+  return bi.toLocaleString('pt-BR', opts);
 }
 
 function fmtBI(bi) {
@@ -104,8 +108,11 @@ function fmtCoins(kk) {
 }
 
 // Texto que vai dentro do campo de entrada, de acordo com a unidade
+// (sem ponto de milhar para não ser relido como decimal)
 function coinFieldText(kk, unit) {
-  return unit === 'bi' ? biNumber(kk / KK_PER_BI) : nf(kk, 0, 3);
+  return unit === 'bi'
+    ? biNumber(kk / KK_PER_BI, false)
+    : kk.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 3, useGrouping: false });
 }
 
 function fmtPct(n) {
@@ -210,7 +217,7 @@ function createCoinField({ inputId, toggleId, onChange }) {
 
   // valor em kk (NaN se vazio/inválido)
   function getKK() {
-    const v = parseBR(input.value);
+    const v = parseBR(input.value, true);
     if (!isFinite(v) || v <= 0) return NaN;
     return unit === 'bi' ? v * KK_PER_BI : v;
   }
